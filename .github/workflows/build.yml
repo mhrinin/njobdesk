@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build solution
+        run: dotnet build NJobDesk.slnx --configuration Release
+
+      - name: Run unit tests
+        run: dotnet test tests/NJobDesk.Tests --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory TestResults/unit
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: TestResults/**/coverage.cobertura.xml
+
+      - name: Run frontend tests
+        working-directory: src/NJobDesk.AspNetCore/Client
+        run: npm test
+
+      - name: Pack
+        run: dotnet pack NJobDesk.slnx --configuration Release --no-build -o artifacts
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts/*.nupkg

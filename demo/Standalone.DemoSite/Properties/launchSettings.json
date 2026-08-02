@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Standalone.DemoSite": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "njobdesk",
+      "applicationUrl": "http://localhost:5090",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

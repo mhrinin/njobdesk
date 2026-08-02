@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <RootNamespace>NJobDesk.AspNetCore</RootNamespace>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>NJobDesk.AspNetCore</PackageId>
+    <Product>NJobDesk.AspNetCore</Product>
+    <Title>NJobDesk dashboard for ASP.NET Core</Title>
+    <Description>A scheduler-agnostic jobs dashboard for any ASP.NET Core app: a management API and embedded UI over the NJobDesk provider contracts, with opt-in persistent execution history and per-run log capture. Add a provider package for your scheduler (Quartz via uQuartz, Hangfire, Umbraco recurring jobs) — or the Umbraco integration for the backoffice.</Description>
+    <PackageTags>jobs scheduler dashboard aspnetcore background-jobs quartz hangfire umbraco</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NJobDesk.Core\NJobDesk.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NJobDesk.Tests" />
+    <InternalsVisibleTo Include="NJobDesk.IntegrationTests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <BuildClient Condition="'$(BuildClient)' == ''">true</BuildClient>
+    <ClientDir>$(MSBuildProjectDirectory)\Client</ClientDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ClientInputs Include="$(ClientDir)\src\**\*.*;$(ClientDir)\package.json;$(ClientDir)\tsconfig.json;$(ClientDir)\vite.standalone.config.ts" />
+  </ItemGroup>
+
+  <Target Name="EnsureClientDependencies" Condition="'$(BuildClient)' == 'true' And !Exists('$(ClientDir)\node_modules')" BeforeTargets="BuildClientAssets">
+    <Message Importance="high" Text="Installing client dependencies (npm ci)..." />
+    <Exec Command="npm ci" WorkingDirectory="$(ClientDir)" />
+  </Target>
+
+  <!-- Builds the standalone SPA (into assets\, embedded into this assembly). The dynamic
+       EmbeddedResource include picks up freshly hashed asset names in the same build. -->
+  <Target Name="BuildClientAssets" Condition="'$(BuildClient)' == 'true'" BeforeTargets="BeforeBuild;Pack" Inputs="@(ClientInputs)" Outputs="$(MSBuildProjectDirectory)\assets\index.html">
+    <Message Importance="high" Text="Building standalone client assets (npm run build:standalone)..." />
+    <Exec Command="npm run build:standalone" WorkingDirectory="$(ClientDir)" />
+  </Target>
+
+  <Target Name="RefreshEmbeddedClientAssets" AfterTargets="BuildClientAssets" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <EmbeddedResource Remove="assets\**" />
+      <EmbeddedResource Include="assets\**" />
+    </ItemGroup>
+  </Target>
+</Project>

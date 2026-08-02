@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/demo/">
+    <Project Path="demo/Standalone.DemoSite/Standalone.DemoSite.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/NJobDesk.AspNetCore/NJobDesk.AspNetCore.csproj" />
+    <Project Path="src/NJobDesk.Core/NJobDesk.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NJobDesk.Tests/NJobDesk.Tests.csproj" />
+  </Folder>
+</Solution>
