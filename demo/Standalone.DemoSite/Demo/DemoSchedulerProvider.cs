@@ -1,6 +1,7 @@
 using NJobDesk.Core.Providers;
 using NJobDesk.Core.Services;
 using NJobDesk.Core.Store;
+using NJobDesk.History.EFCore.Capture;
 
 namespace Standalone.DemoSite.Demo;
 
@@ -15,11 +16,16 @@ internal sealed class DemoSchedulerProvider : ISchedulerProvider
         DemoSchedulerState state,
         ICronService cronService,
         IExecutionHistoryStore historyStore,
+        IExecutionHistoryWriter historyWriter,
+        IExecutionLogCapture logCapture,
+        IExecutionLogStore logStore,
+        ILoggerFactory loggerFactory,
         TimeProvider timeProvider)
     {
         var info = new DemoSchedulerInfoService(state, historyStore, timeProvider);
         Info = info;
-        Management = new DemoSchedulerManagementService(state, cronService, info);
+        Management = new DemoSchedulerManagementService(
+            state, cronService, info, historyWriter, logCapture, logStore, loggerFactory, timeProvider);
     }
 
     public SchedulerProviderDescriptor Descriptor { get; } = new()

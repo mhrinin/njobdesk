@@ -1,24 +1,47 @@
 using NJobDesk.Core.Contracts;
+using NJobDesk.Core.Entities;
 using NJobDesk.Core.Models;
 using NJobDesk.Core.Services;
+using NJobDesk.Core.Store;
+using NJobDesk.History.EFCore.Capture;
 
 namespace Standalone.DemoSite.Demo;
 
 internal sealed class DemoSchedulerManagementService(
     DemoSchedulerState state,
     ICronService cronService,
-    ISchedulerInfoService infoService) : ISchedulerManagementService
+    ISchedulerInfoService infoService,
+    IExecutionHistoryWriter historyWriter,
+    IExecutionLogCapture logCapture,
+    IExecutionLogStore logStore,
+    ILoggerFactory loggerFactory,
+    TimeProvider timeProvider) : ISchedulerManagementService
 {
-    public Task<bool> TriggerJobAsync(string jobId, CancellationToken cancellationToken = default)
+    public async Task<bool> TriggerJobAsync(string jobId, CancellationToken cancellationToken = default)
     {
         if (state.FindJob(jobId) is not { } job)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        var executionId = state.StartRun(job);
-        _ = CompleteLaterAsync(executionId, failed: job.Trigger?.State == JobState.Error);
-        return Task.FromResult(true);
+        var fireInstanceId = Guid.NewGuid().ToString("N");
+        await historyWriter.StartAsync(
+            new JobExecutionHistory
+            {
+                FireInstanceId = fireInstanceId,
+                SchedulerInstanceId = "demo-instance",
+                ProviderKey = DemoSchedulerProvider.Key,
+                JobId = job.Id,
+                JobName = job.Name,
+                JobGroup = job.Group,
+                TriggerId = job.Trigger?.Id,
+                TriggerName = job.Trigger?.Name ?? $"{job.Name}-trigger",
+                StartedUtc = timeProvider.GetUtcNow().UtcDateTime,
+                Status = ExecutionStatus.Running,
+            },
+            cancellationToken);
+        _ = RunLaterAsync(job, fireInstanceId, failed: job.Trigger?.State == JobState.Error);
+        return true;
     }
 
     public Task<bool> PauseJobAsync(string jobId, CancellationToken cancellationToken = default) =>
@@ -76,9 +99,42 @@ internal sealed class DemoSchedulerManagementService(
         return new RescheduleResult(RescheduleStatus.Success, Trigger: updated);
     }
 
-    private async Task CompleteLaterAsync(long executionId, bool failed)
+    // Simulates the run: everything logged on this async flow while the capture scope is active is
+    // persisted against the run, exactly as a real provider integration would do it.
+    private async Task RunLaterAsync(DemoJob job, string fireInstanceId, bool failed)
     {
-        await Task.Delay(TimeSpan.FromSeconds(4));
-        state.CompleteRun(executionId, failed);
+        var logger = loggerFactory.CreateLogger($"Demo.Jobs.{job.JobType}");
+        var scope = logCapture.BeginScope();
+        try
+        {
+            logger.LogInformation("Job started (manual trigger).");
+            await Task.Delay(TimeSpan.FromSeconds(4));
+
+            if (failed)
+            {
+                scope?.RecordException(
+                    $"Demo.Jobs.{job.JobType}",
+                    new HttpRequestException("Response status code does not indicate success: 503 (Service Unavailable)."));
+                logger.LogInformation("Job finished with errors.");
+            }
+            else
+            {
+                logger.LogInformation("Job finished.");
+            }
+        }
+        finally
+        {
+            scope?.Dispose();
+        }
+
+        await historyWriter.CompleteAsync(
+            DemoSchedulerProvider.Key,
+            fireInstanceId,
+            failed ? ExecutionStatus.Failed : ExecutionStatus.Succeeded,
+            failed ? "Demo failure: upstream service returned 503." : null);
+        if (scope is not null)
+        {
+            await logStore.SaveAsync(DemoSchedulerProvider.Key, fireInstanceId, scope);
+        }
     }
 }

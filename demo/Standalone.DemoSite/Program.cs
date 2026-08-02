@@ -1,22 +1,25 @@
 using Microsoft.OpenApi.Writers;
 using NJobDesk.AspNetCore.DependencyInjection;
 using NJobDesk.AspNetCore.Hosting;
-using NJobDesk.Core.Store;
+using NJobDesk.History.EFCore;
+using NJobDesk.History.EFCore.DependencyInjection;
 using Standalone.DemoSite.Demo;
 using Swashbuckle.AspNetCore.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// The shared history store must precede AddNJobDeskApi so its TryAdd default (empty) yields.
 builder.Services.AddSingleton<DemoSchedulerState>();
-builder.Services.AddSingleton<IExecutionHistoryStore, DemoExecutionHistoryStore>();
 
 builder.Services
     .AddNJobDeskApi()
+    .AddEfHistory(HistoryDatabase.Sqlite("Data Source=demo-history.db"))
     .AddProvider<DemoSchedulerProvider>()
     .AddProvider<BasicSchedulerProvider>()
     .AddProvider<FlakySchedulerProvider>()
     .Services
+    // Hosted services run in registration order: the seeder needs the schema migrated and the
+    // startup reconciliation done before it decides whether to seed.
+    .AddHostedService<DemoHistorySeeder>()
     .AddApiVersioning()
     .AddApiExplorer(explorer =>
     {

@@ -39,3 +39,8 @@ demo/**/appsettings.Local.json
 # OS
 Thumbs.db
 .DS_Store
+
+# Demo/design-time SQLite databases
+*.db
+*.db-shm
+*.db-wal

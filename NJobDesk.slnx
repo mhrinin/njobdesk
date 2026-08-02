@@ -5,6 +5,7 @@
   <Folder Name="/src/">
     <Project Path="src/NJobDesk.AspNetCore/NJobDesk.AspNetCore.csproj" />
     <Project Path="src/NJobDesk.Core/NJobDesk.Core.csproj" />
+    <Project Path="src/NJobDesk.History.EFCore/NJobDesk.History.EFCore.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NJobDesk.Tests/NJobDesk.Tests.csproj" />

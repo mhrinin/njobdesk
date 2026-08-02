@@ -120,12 +120,12 @@ Architecture as built (deviations from the sketch are intentional):
 - Gotcha: after the client bundle contents change, `dotnet build` can fail CS1566 on a stale embedded-asset glob — delete `src\NJobDesk.AspNetCore\assets\` and rebuild.
 
 ## Phase 3: History.EFCore neutralization
-Status: Not started
+Status: Complete
 Out of scope for this phase: provider-specific history capture.
 
-- [ ] Extract EF history from uQuartz.History/Persistence: `NJobDeskExecutionHistory`/`NJobDeskExecutionLog` tables, `__NJobDeskHistoryMigrations`, SqlServer+Sqlite migrations regenerated; nested `Migrations\.editorconfig`
-- [ ] Retention cleanup as a plain hosted timer (NOT a Quartz job); stale-`Running` reconciliation hosted service
-- [ ] Provider-neutral `ILogger` per-run capture seams (usable by any provider)
+- [x] Extract EF history from uQuartz.History/Persistence: `NJobDeskExecutionHistory`/`NJobDeskExecutionLog` tables, `__NJobDeskHistoryMigrations`, SqlServer+Sqlite migrations regenerated; nested `Migrations\.editorconfig`
+- [x] Retention cleanup as a plain hosted timer (NOT a Quartz job); stale-`Running` reconciliation hosted service
+- [x] Provider-neutral `ILogger` per-run capture seams (usable by any provider)
 
 ### Acceptance criteria
 1. Store round-trips + paging + retention + reconciliation covered by tests on both providers (SQLite in-memory; migration parity via `HasPendingModelChanges`).
@@ -135,7 +135,16 @@ Out of scope for this phase: provider-specific history capture.
 - `dotnet test` green both TFMs; demo restart → history retained; `dotnet format --verify-no-changes`.
 
 ### Phase Summary
-_(write when phase completes)_
+Completed 2026-08-02. Verified: 57 (net8.0) / 59 (net10.0) tests green — store round-trip/paging/filters/statistics buckets, writer start/complete incl. cross-provider isolation, retention batching, stale-running reconciliation with node prefix, log capture (attach-by-(provider,fireInstance), truncation limits, overflow warning entry, disabled-by-options, no-capture-outside-scope), cleanup + startup-reconciliation services, and migration parity via `HasPendingModelChanges` (net10-only — the API is EF9+, so the parity test file is `#if NET10_0_OR_GREATER`); `dotnet format --verify-no-changes` clean; `NJobDesk.History.EFCore.0.1.0.nupkg` packs. **Demo persistence verified end-to-end over the API**: fresh boot seeds 149 deterministic runs + 1 running into `demo-history.db`; a triggered run persists (Succeeded, ~4s, exactly the two run log entries); after restart the total is retained (150), the seeder does NOT reseed, and the previously-running row is Failed with the startup-reconciliation message.
+
+What was built (`src\NJobDesk.History.EFCore`, net8.0;net10.0, refs Core + EF Sqlite/SqlServer + Design(private)):
+- **Schema**: abstract `NJobDeskHistoryDbContext` (tables `NJobDeskExecutionHistory`/`NJobDeskExecutionLog`, migrations table `__NJobDeskHistoryMigrations`) + `Sqlite…`/`SqlServer…` subclasses (SQL Server schema `njobdesk`) + internal design-time factories. Provider-model columns: ProviderKey(64)/JobId(400)/JobGroup?/TriggerId?(400)/TriggerName?; unique index `(ProviderKey, FireInstanceId)`, query index `(ProviderKey, JobId, StartedUtc)`. Migrations generated with global dotnet-ef 10 — multitarget projects fail `--framework` with MSB4057; use **`$env:TargetFramework='net10.0'` then `dotnet ef migrations add <Name> --context Sqlite|SqlServerNJobDeskHistoryDbContext --output-dir Migrations/Sqlite|SqlServer`** from the project dir. EF10-generated migrations compile fine under EF8.
+- **EF versions per TFM** (CPM conditional groups): net8→EF 8.0.29 (LTS), net10→EF 10.0.10. NU1903 for `SQLitePCLRaw.lib.e_sqlite3` is emitted by BOTH current EF trains (even 10.0.10) and direct bundle/lib pins don't lift it — it stays a warning under the existing `WarningsNotAsErrors=NU190x`; don't burn time re-pinning.
+- **Registration**: `builder.AddEfHistory(HistoryDatabase.Sqlite|SqlServer(conn))` — provider-specific pooled context factory adapted to `IDbContextFactory<NJobDeskHistoryDbContext>` via `DelegatingDbContextFactory`, `SchemaMigrationHostedService` (migrates at startup), `Replace`s `IExecutionHistoryStore`→`EfExecutionHistoryStore` and `IExecutionHistoryWriter`→`EfExecutionHistoryWriter`, startup `ExecutionHistoryReconciliationService`, `ExecutionHistoryCleanupService` (`BackgroundService` + `PeriodicTimer(options.CleanupInterval, timeProvider)`, default 6h; testable `RunCleanupAsync`), and the capture seam. Options `NJobDeskHistoryOptions` bind from `{SectionName}:History` (RetentionDays 30, CleanupInterval, Clustered, Logs{Enabled/MinimumLevel/MaxEntriesPerRun}).
+- **New Core contract (pulled in by necessity)**: `IExecutionHistoryWriter` (StartAsync(entry)/CompleteAsync(providerKey, fireInstanceId, status, error)) with a no-op `NullExecutionHistoryWriter` TryAdd default — providers write run lifecycles through it; the EF package replaces it. `JobExecutionLog` writers/store are separate (below).
+- **Provider-neutral log capture** (replaces the donor's Quartz `IJobFactory` decorator): public `IExecutionLogCapture.BeginScope()` → `ExecutionLogCaptureScope` (ambient `AsyncLocal` buffer + `RecordException`); an MEL `ILoggerProvider` (TryAddEnumerable) buffers anything logged on the run's async flow; `IExecutionLogStore.SaveAsync(providerKey, fireInstanceId, scope)` attaches entries (with truncation caps + dropped-count warning). **Contract: dispose the scope when the run ends, THEN save** — otherwise the store's own EF command logging gets captured into the buffer it persists (hit this live in the demo; `SaveAsync` now defensively disposes the scope first, but providers should still follow the pattern). Serilog-sink capture did NOT move (uQuartz-specific; Phase 7 decides its fate).
+- **Demo**: `DemoSchedulerState` is jobs-only now; history flows through the real store (`AddEfHistory(Sqlite "Data Source=demo-history.db")`). `DemoHistorySeeder` (IHostedService, registered AFTER `AddEfHistory` — hosted services run in registration order and it needs migration+reconciliation first) seeds on empty store only. Trigger flow exercises the real seams: `IExecutionHistoryWriter.StartAsync` → capture scope + real `ILogger` calls → dispose scope → `CompleteAsync` → `IExecutionLogStore.SaveAsync`. `.gitignore` covers `*.db`.
+- Tests use `SqliteHistoryDatabaseFixture` (in-memory SQLite kept alive by an open connection, real migrations applied via `Database.Migrate()`, exposed as `IDbContextFactory<NJobDeskHistoryDbContext>`).
 
 ## Phase 4: NJobDesk.Umbraco host
 Status: Not started

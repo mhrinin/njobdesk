@@ -33,6 +33,7 @@ public static class NJobDeskServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ICronService, CronosCronService>();
         services.TryAddSingleton<IExecutionHistoryStore, EmptyExecutionHistoryStore>();
+        services.TryAddSingleton<IExecutionHistoryWriter, NullExecutionHistoryWriter>();
         services.TryAddSingleton<ISchedulerProviderRegistry, SchedulerProviderRegistry>();
         services.TryAddSingleton<IDashboardInfoService, AggregatingDashboardInfoService>();
         services.TryAddSingleton<IDashboardManagementService, AggregatingDashboardManagementService>();

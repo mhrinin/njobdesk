@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NJobDesk.AspNetCore\NJobDesk.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\NJobDesk.History.EFCore\NJobDesk.History.EFCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

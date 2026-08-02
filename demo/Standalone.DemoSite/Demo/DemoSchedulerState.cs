@@ -1,33 +1,27 @@
 using Cronos;
-using NJobDesk.Core.Entities;
 using NJobDesk.Core.Models;
 
 namespace Standalone.DemoSite.Demo;
 
 /// <summary>
-/// In-memory scheduler world backing the demo: a handful of jobs with cron triggers and two days
-/// of seeded execution history. Management operations mutate this state so every dashboard action
-/// is observable without a real scheduler.
+/// In-memory scheduler world backing the demo: a handful of jobs with cron triggers. Management
+/// operations mutate this state so every dashboard action is observable without a real scheduler;
+/// execution history persists through the real EF Core history store.
 /// </summary>
 internal sealed class DemoSchedulerState
 {
-    private const string DemoInstanceId = "demo-instance";
-
     private readonly Lock _lock = new();
     private readonly TimeProvider _timeProvider;
     private readonly List<DemoJob> _jobs = [];
-    private readonly List<JobExecutionHistory> _history = [];
-    private readonly Dictionary<long, List<JobExecutionLog>> _logs = [];
-    private long _nextExecutionId = 1;
-    private long _nextLogId = 1;
 
     public DemoSchedulerState(TimeProvider timeProvider)
     {
         _timeProvider = timeProvider;
+        StartedUtc = timeProvider.GetUtcNow().UtcDateTime.AddHours(-49);
         Seed();
     }
 
-    public DateTime StartedUtc { get; private set; }
+    public DateTime StartedUtc { get; }
 
     public bool Paused { get; private set; }
 
@@ -115,118 +109,8 @@ internal sealed class DemoSchedulerState
         }
     }
 
-    public long StartRun(DemoJob job)
-    {
-        lock (_lock)
-        {
-            var execution = new JobExecutionHistory
-            {
-                Id = _nextExecutionId++,
-                FireInstanceId = Guid.NewGuid().ToString("N"),
-                SchedulerInstanceId = DemoInstanceId,
-                ProviderKey = DemoSchedulerProvider.Key,
-                JobId = job.Id,
-                JobName = job.Name,
-                JobGroup = job.Group,
-                TriggerId = job.Trigger?.Id,
-                TriggerName = job.Trigger?.Name ?? $"{job.Name}-trigger",
-                StartedUtc = _timeProvider.GetUtcNow().UtcDateTime,
-                Status = ExecutionStatus.Running,
-            };
-            _history.Add(execution);
-            _logs[execution.Id] = [NewLog(execution.Id, ExecutionLogLevel.Information, job.JobType, "Job started (manual trigger).")];
-            return execution.Id;
-        }
-    }
-
-    public void CompleteRun(long executionId, bool failed)
-    {
-        lock (_lock)
-        {
-            var execution = _history.FirstOrDefault(entry => entry.Id == executionId);
-            if (execution is null || execution.Status != ExecutionStatus.Running)
-            {
-                return;
-            }
-
-            var finished = _timeProvider.GetUtcNow().UtcDateTime;
-            execution.FinishedUtc = finished;
-            execution.DurationMs = (long)(finished - execution.StartedUtc).TotalMilliseconds;
-            execution.Status = failed ? ExecutionStatus.Failed : ExecutionStatus.Succeeded;
-            execution.ErrorMessage = failed ? "Demo failure: upstream service returned 503." : null;
-
-            var logs = _logs[executionId];
-            if (failed)
-            {
-                logs.Add(NewLog(executionId, ExecutionLogLevel.Error, execution.JobName,
-                    "Request to upstream failed.",
-                    "System.Net.Http.HttpRequestException: Response status code does not indicate success: 503 (Service Unavailable).\n   at Demo.UpstreamClient.SendAsync()"));
-            }
-
-            logs.Add(NewLog(executionId, ExecutionLogLevel.Information, execution.JobName,
-                failed ? "Job finished with errors." : "Job finished."));
-        }
-    }
-
-    public (IReadOnlyList<JobExecutionHistory> Items, Dictionary<long, List<JobExecutionLog>> Logs) SnapshotHistory()
-    {
-        lock (_lock)
-        {
-            return ([.. _history], _logs.ToDictionary(pair => pair.Key, pair => pair.Value.ToList()));
-        }
-    }
-
-    public int RemoveFinishedBefore(DateTime cutoffUtc, int batchSize)
-    {
-        lock (_lock)
-        {
-            var expired = _history
-                .Where(entry => entry.Status != ExecutionStatus.Running && entry.FinishedUtc < cutoffUtc)
-                .Take(batchSize)
-                .ToList();
-            foreach (var entry in expired)
-            {
-                _history.Remove(entry);
-                _logs.Remove(entry.Id);
-            }
-
-            return expired.Count;
-        }
-    }
-
-    public int MarkStaleRunning(DateTime startedBeforeUtc, string reason)
-    {
-        lock (_lock)
-        {
-            var stale = _history
-                .Where(entry => entry.Status == ExecutionStatus.Running && entry.StartedUtc < startedBeforeUtc)
-                .ToList();
-            foreach (var entry in stale)
-            {
-                entry.Status = ExecutionStatus.Failed;
-                entry.ErrorMessage = reason;
-            }
-
-            return stale.Count;
-        }
-    }
-
-    private JobExecutionLog NewLog(long executionId, ExecutionLogLevel level, string category, string message, string? exception = null) => new()
-    {
-        Id = _nextLogId++,
-        ExecutionId = executionId,
-        TimestampUtc = _timeProvider.GetUtcNow().UtcDateTime,
-        Level = level,
-        Category = $"Demo.Jobs.{category}",
-        Message = message,
-        Exception = exception,
-    };
-
     private void Seed()
     {
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        StartedUtc = now.AddHours(-49);
-
         _jobs.AddRange(
         [
             NewJob("reports", "daily-sales-report", "Aggregates yesterday's orders into the sales report.", "0 0 6 * * ?"),
@@ -241,86 +125,6 @@ internal sealed class DemoSchedulerState
 
         _jobs[3].Trigger!.State = JobState.Paused;
         _jobs[7].Trigger!.State = JobState.Error;
-
-        // Two days of believable history: every job ran on a spread-out cadence with a ~7% failure
-        // rate (deterministic — no randomness so restarts look identical).
-        var executionSeed = 0;
-        foreach (var job in _jobs)
-        {
-            var cadence = TimeSpan.FromMinutes(90 + (executionSeed % 5) * 47);
-            for (var startedUtc = now.AddHours(-48); startedUtc < now.AddMinutes(-10); startedUtc += cadence)
-            {
-                executionSeed++;
-                var failed = executionSeed % 13 == 0 || (job.Name == "newsletter-dispatch" && executionSeed % 5 == 0);
-                var durationMs = 400 + (executionSeed % 23) * 350;
-                AddSeededExecution(job, startedUtc, durationMs, failed);
-            }
-        }
-
-        // One run currently in flight so the overview shows a live item.
-        var running = _jobs[2];
-        StartRun(running);
-    }
-
-    private void AddSeededExecution(DemoJob job, DateTime startedUtc, int durationMs, bool failed)
-    {
-        var execution = new JobExecutionHistory
-        {
-            Id = _nextExecutionId++,
-            FireInstanceId = Guid.NewGuid().ToString("N"),
-            SchedulerInstanceId = DemoInstanceId,
-            ProviderKey = DemoSchedulerProvider.Key,
-            JobId = job.Id,
-            JobName = job.Name,
-            JobGroup = job.Group,
-            TriggerId = job.Trigger!.Id,
-            TriggerName = job.Trigger.Name,
-            StartedUtc = startedUtc,
-            FinishedUtc = startedUtc.AddMilliseconds(durationMs),
-            DurationMs = durationMs,
-            Status = failed ? ExecutionStatus.Failed : ExecutionStatus.Succeeded,
-            ErrorMessage = failed ? "Demo failure: upstream service returned 503." : null,
-        };
-        _history.Add(execution);
-
-        List<JobExecutionLog> logs =
-        [
-            new()
-            {
-                Id = _nextLogId++,
-                ExecutionId = execution.Id,
-                TimestampUtc = startedUtc,
-                Level = ExecutionLogLevel.Information,
-                Category = $"Demo.Jobs.{job.JobType}",
-                Message = "Job started.",
-            },
-            new()
-            {
-                Id = _nextLogId++,
-                ExecutionId = execution.Id,
-                TimestampUtc = startedUtc.AddMilliseconds(durationMs / 2.0),
-                Level = ExecutionLogLevel.Debug,
-                Category = $"Demo.Jobs.{job.JobType}",
-                Message = $"Processed batch 1 of 3 ({durationMs / 3} items).",
-                Properties = """{"batch":1,"total":3}""",
-            },
-        ];
-
-        if (failed)
-        {
-            logs.Add(new JobExecutionLog
-            {
-                Id = _nextLogId++,
-                ExecutionId = execution.Id,
-                TimestampUtc = execution.FinishedUtc!.Value,
-                Level = ExecutionLogLevel.Error,
-                Category = $"Demo.Jobs.{job.JobType}",
-                Message = "Request to upstream failed.",
-                Exception = "System.Net.Http.HttpRequestException: Response status code does not indicate success: 503 (Service Unavailable).\n   at Demo.UpstreamClient.SendAsync()",
-            });
-        }
-
-        _logs[execution.Id] = logs;
     }
 
     private DemoJob NewJob(string group, string name, string description, string cron, bool isSystemJob = false) => new()
