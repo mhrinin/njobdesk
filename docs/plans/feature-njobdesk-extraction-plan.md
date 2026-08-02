@@ -51,16 +51,16 @@ Dev-time cross-repo dependency: uQuartz consumes NJobDesk via a **local folder f
 - uQuartz's README roadmap item "adopt Quartz.HttpApi" is superseded by the provider abstraction — reconcile the README during Phase 7.
 
 ## Phase 1: Extraction bootstrap
-Status: In progress
+Status: Complete
 Out of scope for this phase: provider model changes, any behavior changes beyond the rename.
 
-- [ ] `git init` `D:\Projects\njobdesk`; copy the MOVE list from `D:\Projects\Umbraco.Community.Quartz`; solution `NJobDesk.slnx`
-- [ ] Rails: Directory.Build.props/CPM; `.editorconfig` + `.claude\rules\` (copied from uQuartz — identical family); `EnforceCodeStyleInBuild=true`; keep uQuartz's `.github\workflows\{build,release}.yml` + dependabot + MIT LICENSE (adjust names)
-- [ ] Full rename sweep per the list above (namespaces, DI methods, policy, element prefix `njd-`, localization keys, window global, data-marks, ApiPath)
-- [ ] Multitarget `net8.0;net10.0` for Core/AspNetCore (fix or `#if` any net10-only BCL usage found by compilation)
-- [ ] `ICronService` + Cronos-based `CronosCronService` in Core (pulled forward); generic mapper parts split into Core (`ExecutionModelMapper`)
-- [ ] Standalone demo site: plain ASP.NET Core + in-memory `DemoSchedulerProvider` fake (implements the contracts with seeded jobs/runs/logs) + `--export-openapi` mode
-- [ ] Checked-in OpenAPI spec + offline `npm run generate-client`; port web-test-runner client tests
+- [x] `git init` `D:\Projects\njobdesk`; copy the MOVE list from `D:\Projects\Umbraco.Community.Quartz`; solution `NJobDesk.slnx`
+- [x] Rails: Directory.Build.props/CPM; `.editorconfig` + `.claude\rules\` (copied from uQuartz — identical family); `EnforceCodeStyleInBuild=true`; keep uQuartz's `.github\workflows\{build,release}.yml` + dependabot + MIT LICENSE (adjust names)
+- [x] Full rename sweep per the list above (namespaces, DI methods, policy, element prefix `njd-`, localization keys, window global, data-marks, ApiPath)
+- [x] Multitarget `net8.0;net10.0` for Core/AspNetCore (fix or `#if` any net10-only BCL usage found by compilation)
+- [x] `ICronService` + Cronos-based `CronosCronService` in Core (pulled forward); generic mapper parts split into Core (`ExecutionModelMapper`)
+- [x] Standalone demo site: plain ASP.NET Core + in-memory `DemoSchedulerProvider` fake (implements the contracts with seeded jobs/runs/logs) + `--export-openapi` mode
+- [x] Checked-in OpenAPI spec + offline `npm run generate-client`; port web-test-runner client tests
 
 ### Acceptance criteria
 1. `dotnet build` + tests green on net8.0 and net10.0; `npm test` green.
@@ -72,7 +72,17 @@ Out of scope for this phase: provider model changes, any behavior changes beyond
 - `dotnet run` demo → browse `/njobdesk`: job list, detail, history, logs, trigger action against the fake.
 
 ### Phase Summary
-_(write when phase completes)_
+Completed 2026-08-02. ALL acceptance criteria verified: 10 .NET tests green on net8.0+net10.0 (no net10-only BCL usage surfaced — the multitarget downgrade was free); 23 client tests green; `dotnet format --verify-no-changes` clean; NJobDesk.Core + NJobDesk.AspNetCore 0.1.0 nupkgs pack; **browser-verified** dashboard at `/njobdesk` on the standalone demo — Overview (KPI tiles, 24h trend chart, live Running-now table with elapsed ticking, scheduler card incl. renamed Provider version/Job store fields), Jobs (state chips, human cron summaries, relative next-fire, Run now/Pause/Resume live, system-job toggle), trigger POST + list refresh + polling all working; only console noise is a missing `/favicon.ico` 404 and a donor `UUI-INPUT needs a label` a11y warning (both Phase-8 polish items).
+
+Structure and deviations a future agent must know:
+- Repo: `NJobDesk.slnx`; projects `src\NJobDesk.Core` (net8+net10; deps CronExpressionDescriptor, Cronos, M.E.DependencyInjection.Abstractions), `src\NJobDesk.AspNetCore` (net8+net10; embeds the SPA; npm build runs from MSBuild via `BuildClient` — pass `-p:BuildClient=false` to skip; NOTE `dotnet format` rejects `-p:` — run it without), `tests\NJobDesk.Tests`, `demo\Standalone.DemoSite` (net10; also the OpenAPI exporter).
+- **AddNJobDesk (Core DI)** registers TryAdd defaults: `NotConfiguredScheduler{Info,Management}Service`, `EmptyExecutionHistoryStore`, `CronosCronService`, `TimeProvider.System` — providers must register BEFORE `AddNJobDesk*` (TryAdd semantics; verified by test). The Quartz-probe + `uQuartzOptions`/validator did NOT move (they stay in uQuartz).
+- **ICronService** (Core) + `CronosCronService`: accepts 5/6-field (Quartz-style tokens ok), rejects 7-field year expressions with a clear error; `CronDescriptions.Describe` (CronExpressionDescriptor) for summaries; `ExecutionModelMapper` carries the generic mapper halves. `SchedulerStatusModel.QuartzVersion/JobStoreType` → `ProviderVersion/StoreType` (Phase-2 softening pulled forward; client + en.ts aligned).
+- **OpenAPI pipeline**: checked-in spec at `src\NJobDesk.AspNetCore\openapi\openapi.json`, exported OFFLINE by `dotnet run --project demo\Standalone.DemoSite -- --export-openapi <path>` (builds the app, resolves ISwaggerProvider, writes V3 JSON, exits — no live host). The demo's SwaggerGen needs three things for a faithful spec (all in `Program.cs` + `Demo\RequireNonNullableSchemaFilter.cs`): `DocInclusionPredicate((_,_) => true)` (controllers use per-area ApiExplorer GroupNames), `SupportNonNullableReferenceTypes` + require-non-nullable schema filter (else the generated TS gets everything optional and the client breaks), and `CustomOperationIds` = camelCased action name (the SDK method names — `triggerJob`, `validateCron` — come from operationIds). `npm run generate-client` reads the checked-in spec.
+- Rename-sweep extras beyond the plan list: `quartzIcons`→`njdIcons`, localization root object `quartzDashboard`→`njobdesk`, `<!--%QUARTZ_CONFIG%-->`→`%NJOBDESK_CONFIG%`, tsconfig `types` dropped `@umbraco-cms/backoffice/extension-types` (client is now backoffice-free; package.json has no `@umbraco-cms` dep and no umbraco build scripts — those return in Phase 4). Client custom elements/files use the `njd-` prefix.
+- Demo fake: `Demo\DemoSchedulerState` (8 jobs/4 groups, one paused + one error-state, ~150 seeded executions over 48h with logs incl. exceptions, 1 live running); management ops mutate state; manual trigger completes after ~4s; reschedule validates via ICronService and returns the updated `TriggerModel` (the controller returns `RescheduleResult.Trigger` — a fake that omits it renders an empty row).
+- Workflows: uQuartz's build/release (NuGet Trusted Publishing OIDC) carried over; integration-test step removed until that suite exists. `.gitignore` covers `assets/` (built SPA) + `artifacts/`.
+- uQuartz repo remains UNTOUCHED (Phase 7 refactors it).
 
 ## Phase 2: Provider model
 Status: Not started
