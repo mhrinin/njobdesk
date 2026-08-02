@@ -4,13 +4,13 @@ using NJobDesk.Core.Contracts;
 using NJobDesk.Core.Entities;
 using NJobDesk.Core.Mapping;
 using NJobDesk.Core.Models;
-using NJobDesk.Core.Services;
+using NJobDesk.Core.Providers;
 using NJobDesk.Core.Store;
 
 namespace NJobDesk.AspNetCore.Controllers;
 
 [ApiExplorerSettings(GroupName = "Executions")]
-public class ExecutionsController(IExecutionHistoryStore historyService, ISchedulerInfoService infoService)
+public class ExecutionsController(IExecutionHistoryStore historyService, IDashboardInfoService infoService)
     : NJobDeskApiControllerBase
 {
     [HttpGet("executions")]
@@ -19,16 +19,26 @@ public class ExecutionsController(IExecutionHistoryStore historyService, ISchedu
         CancellationToken cancellationToken,
         int skip = 0,
         int take = 50,
-        string? jobGroup = null,
+        string? provider = null,
+        string? jobId = null,
         string? jobName = null,
         ExecutionStatus? state = null,
         DateTime? fromUtc = null,
         DateTime? toUtc = null)
     {
+        var providerKey = provider;
+        var localJobId = jobId;
+        if (jobId is not null && CompositeId.TrySplit(jobId, out var jobProviderKey, out var jobLocalId))
+        {
+            providerKey = jobProviderKey;
+            localJobId = jobLocalId;
+        }
+
         var page = await historyService.GetPageAsync(
             new ExecutionHistoryFilter
             {
-                JobGroup = jobGroup,
+                ProviderKey = providerKey,
+                JobId = localJobId,
                 JobName = jobName,
                 Status = state,
                 FromUtc = fromUtc,
@@ -38,7 +48,7 @@ public class ExecutionsController(IExecutionHistoryStore historyService, ISchedu
             },
             cancellationToken);
 
-        return new PagedResult<ExecutionModel>(page.Total, page.Items.Select(ExecutionModelMapper.MapExecution));
+        return new PagedResult<ExecutionModel>(page.Total, page.Items.Select(MapDashboardExecution));
     }
 
     [HttpGet("executions/{id:long}/logs")]
@@ -53,4 +63,7 @@ public class ExecutionsController(IExecutionHistoryStore historyService, ISchedu
     [ProducesResponseType<IReadOnlyList<ExecutionModel>>(StatusCodes.Status200OK)]
     public Task<IReadOnlyList<ExecutionModel>> GetRunningExecutions(CancellationToken cancellationToken) =>
         infoService.GetRunningAsync(cancellationToken);
+
+    private static ExecutionModel MapDashboardExecution(JobExecutionHistory entry) =>
+        ExecutionModelMapper.MapExecution(entry).Stamp(entry.ProviderKey);
 }

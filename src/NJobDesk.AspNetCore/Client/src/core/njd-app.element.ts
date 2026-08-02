@@ -13,12 +13,13 @@ import "@umbraco-ui/uui-dialog-layout/lib";
 import { SchedulerService } from "./api/index.js";
 import { NJobDeskElement } from "./element.js";
 import { njdIcons } from "./icons/icons.js";
-import { setReadOnly } from "./services/dashboard-state.js";
+import { setProviders, setReadOnly } from "./services/dashboard-state.js";
 import { setModalContainer } from "./services/modal.service.js";
 import { setToastContainer } from "./services/notification.service.js";
 import { NJobDeskTileOpenEvent } from "./components/stat-tile.element.js";
 import type { NJobDeskJobsFilterIntent } from "./views/jobs-view.element.js";
 import type { NJobDeskHistoryFilterIntent } from "./views/history-view.element.js";
+import "./components/provider-banner.element.js";
 import "./modals/confirm-modal.element.js";
 import "./views/overview-view.element.js";
 import "./views/jobs-view.element.js";
@@ -51,18 +52,19 @@ export class NJobDeskDashboardElement extends NJobDeskElement {
     this.#iconRegistry.attach(this);
     this.addEventListener(NJobDeskTileOpenEvent.TYPE, ((event: Event) =>
       this.#handleTileOpen((event as NJobDeskTileOpenEvent).detail.tile)) as EventListener);
-    this.#resolveReadOnly();
+    this.#resolveStatus();
   }
 
-  // The standalone host injects readOnly synchronously; when it didn't (Umbraco), resolve it once
-  // from the scheduler status API so mutating controls are gated in every host.
-  async #resolveReadOnly() {
-    if (window.__NJOBDESK__?.readOnly !== undefined) {
+  // The overview keeps this fresh while polling; the shell resolves it once on boot so provider
+  // capabilities (and readOnly, when the host didn't inject it) gate the UI on every tab.
+  async #resolveStatus() {
+    const response = await SchedulerService.getSchedulerStatus();
+    if (!response.data) {
       return;
     }
 
-    const response = await SchedulerService.getSchedulerStatus();
-    if (response.data) {
+    setProviders(response.data.providers);
+    if (window.__NJOBDESK__?.readOnly === undefined) {
       setReadOnly(response.data.readOnly);
     }
   }
@@ -122,6 +124,7 @@ export class NJobDeskDashboardElement extends NJobDeskElement {
 
   render() {
     return html`
+      <njd-provider-banner></njd-provider-banner>
       <uui-tab-group>
         ${this.#renderTab("overview", "njobdesk_tabOverview")}
         ${this.#renderTab("jobs", "njobdesk_tabJobs")}

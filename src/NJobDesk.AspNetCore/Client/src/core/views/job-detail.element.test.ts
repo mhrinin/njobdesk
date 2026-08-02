@@ -1,12 +1,38 @@
 import { expect } from "@esm-bundle/chai";
-import type { JobDetailModel } from "../api/index.js";
+import type { JobDetailModel, SchedulerCapabilities } from "../api/index.js";
 import { NJobDeskJobActionEvent } from "../components/job-actions-cell.element.js";
 import { NJobDeskJobDetailCloseEvent, type NJobDeskJobDetailElement } from "./job-detail.element.js";
 import "./job-detail.element.js";
 
-function createDetail(): JobDetailModel {
+const fullCapabilities: SchedulerCapabilities = {
+  triggerNow: true,
+  pause: true,
+  scheduleEditing: true,
+  delete: true,
+  groups: true,
+  triggers: true,
+  history: true,
+  runLogs: true,
+  interrupt: true,
+};
+
+const noCapabilities: SchedulerCapabilities = {
+  triggerNow: false,
+  pause: false,
+  scheduleEditing: false,
+  delete: false,
+  groups: false,
+  triggers: false,
+  history: false,
+  runLogs: false,
+  interrupt: false,
+};
+
+function createDetail(capabilities: SchedulerCapabilities = fullCapabilities): JobDetailModel {
   return {
     job: {
+      id: "demo:site.cleanup",
+      providerKey: "demo",
       group: "site",
       name: "cleanup",
       description: null,
@@ -19,9 +45,11 @@ function createDetail(): JobDetailModel {
       nextFireTimeUtc: null,
       previousFireTimeUtc: null,
       isSystemJob: false,
+      capabilities,
     },
     triggers: [
       {
+        id: "demo:site.cleanup-trigger",
         group: "site",
         name: "cleanup-trigger",
         description: null,
@@ -42,23 +70,29 @@ function createDetail(): JobDetailModel {
   };
 }
 
+async function createElement(detail: JobDetailModel): Promise<NJobDeskJobDetailElement> {
+  const element = document.createElement("njd-job-detail");
+  element.detail = detail;
+  document.body.appendChild(element);
+  await element.updateComplete;
+  return element;
+}
+
 describe("njd-job-detail", () => {
   let element: NJobDeskJobDetailElement;
 
   beforeEach(async () => {
-    element = document.createElement("njd-job-detail");
-    element.detail = createDetail();
-    document.body.appendChild(element);
-    await element.updateComplete;
+    element = await createElement(createDetail());
   });
 
   afterEach(() => {
     element.remove();
   });
 
-  it("renders the job id in the header", () => {
+  it("renders the job group and name in the header", () => {
     const header = element.shadowRoot!.querySelector(".detail-header h3")!;
-    expect(header.textContent).to.equal("site/cleanup");
+    expect(header.textContent).to.contain("site /");
+    expect(header.textContent).to.contain("cleanup");
   });
 
   it("renders one row per trigger", () => {
@@ -76,7 +110,7 @@ describe("njd-job-detail", () => {
     expect(closed).to.be.true;
   });
 
-  it("dispatches a job action event from the trigger button", () => {
+  it("dispatches a job action event carrying the opaque job id", () => {
     let received: { action: string; jobId: string } | undefined;
     element.addEventListener(NJobDeskJobActionEvent.TYPE, ((event: Event) => {
       received = (event as NJobDeskJobActionEvent).detail;
@@ -84,7 +118,29 @@ describe("njd-job-detail", () => {
 
     element.shadowRoot!.querySelector<HTMLElement>("[data-mark='njobdesk:action:trigger']")!.click();
 
-    expect(received).to.deep.equal({ action: "trigger", jobId: "site/cleanup" });
+    expect(received).to.deep.equal({ action: "trigger", jobId: "demo:site.cleanup" });
+  });
+
+  it("hides management actions when the provider lacks the capabilities", async () => {
+    const limited = await createElement(createDetail(noCapabilities));
+
+    expect(limited.shadowRoot!.querySelector("[data-mark='njobdesk:action:trigger']")).to.be.null;
+    expect(limited.shadowRoot!.querySelector("[popovertarget='detail-more']")).to.be.null;
+    const triggerActions = limited.shadowRoot!.querySelector("njd-trigger-actions-cell")!;
+    await triggerActions.updateComplete;
+    expect(triggerActions.shadowRoot!.querySelector("[data-mark='njobdesk:action:edit']")).to.be.null;
+    expect(triggerActions.shadowRoot!.querySelector("[data-mark='njobdesk:action:pause']")).to.be.null;
+    limited.remove();
+  });
+
+  it("keeps the cron preview but hides editing without the schedule-editing capability", async () => {
+    const limited = await createElement(createDetail({ ...noCapabilities, triggers: true }));
+
+    const triggerActions = limited.shadowRoot!.querySelector("njd-trigger-actions-cell")!;
+    await triggerActions.updateComplete;
+    expect(triggerActions.shadowRoot!.querySelector("[data-mark='njobdesk:action:preview']")).to.not.be.null;
+    expect(triggerActions.shadowRoot!.querySelector("[data-mark='njobdesk:action:edit']")).to.be.null;
+    limited.remove();
   });
 
   it("renders a loader without a detail model", async () => {

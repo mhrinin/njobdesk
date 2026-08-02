@@ -1,7 +1,7 @@
 import { css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { NJobDeskElement } from "../element.js";
-import type { JobState } from "../api/index.js";
+import type { JobState, SchedulerCapabilities } from "../api/index.js";
 import { ReadOnlyController } from "../services/dashboard-state.js";
 import { popoverMenuStyles } from "../utils/shared-styles.js";
 
@@ -23,6 +23,9 @@ export class NJobDeskJobActionsCellElement extends NJobDeskElement {
   @property()
   state: JobState | undefined;
 
+  @property({ attribute: false })
+  capabilities: SchedulerCapabilities | undefined;
+
   #readOnly = new ReadOnlyController(this);
 
   #dispatch(action: NJobDeskJobAction) {
@@ -31,63 +34,88 @@ export class NJobDeskJobActionsCellElement extends NJobDeskElement {
   }
 
   render() {
-    if (this.#readOnly.readOnly) {
+    const capabilities = this.capabilities;
+    if (this.#readOnly.readOnly || !capabilities) {
+      return nothing;
+    }
+
+    if (!capabilities.triggerNow && !capabilities.pause && !capabilities.delete) {
       return nothing;
     }
 
     return html`
       <uui-action-bar>
-        <uui-button
-          compact
-          look="secondary"
-          data-mark="njobdesk:action:trigger"
-          label=${this.localize.term("njobdesk_actionTrigger")}
-          @click=${() => this.#dispatch("trigger")}>
-          <uui-icon name="icon-play"></uui-icon>
-        </uui-button>
-        ${this.state === "Paused"
+        ${capabilities.triggerNow
           ? html`
               <uui-button
                 compact
                 look="secondary"
-                data-mark="njobdesk:action:resume"
-                label=${this.localize.term("njobdesk_actionResume")}
-                @click=${() => this.#dispatch("resume")}>
-                <uui-icon name="icon-refresh"></uui-icon>
+                data-mark="njobdesk:action:trigger"
+                label=${this.localize.term("njobdesk_actionTrigger")}
+                @click=${() => this.#dispatch("trigger")}>
+                <uui-icon name="icon-play"></uui-icon>
               </uui-button>
             `
-          : html`
+          : nothing}
+        ${this.#renderPauseResume(capabilities)}
+        ${capabilities.delete
+          ? html`
               <uui-button
                 compact
                 look="secondary"
-                data-mark="njobdesk:action:pause"
-                label=${this.localize.term("njobdesk_actionPause")}
-                @click=${() => this.#dispatch("pause")}>
-                <uui-icon name="icon-pause"></uui-icon>
+                popovertarget="more"
+                label=${this.localize.term("njobdesk_actionMore")}>
+                <uui-symbol-more></uui-symbol-more>
               </uui-button>
-            `}
-        <uui-button
-          compact
-          look="secondary"
-          popovertarget="more"
-          label=${this.localize.term("njobdesk_actionMore")}>
-          <uui-symbol-more></uui-symbol-more>
-        </uui-button>
+            `
+          : nothing}
       </uui-action-bar>
-      <uui-popover-container id="more" placement="bottom-end">
-        <div class="menu">
-          <uui-button
-            look="default"
-            color="danger"
-            data-mark="njobdesk:action:delete"
-            label=${this.localize.term("njobdesk_actionDelete")}
-            @click=${() => this.#dispatch("delete")}>
-            <uui-icon name="icon-trash"></uui-icon>
-            ${this.localize.term("njobdesk_actionDelete")}
-          </uui-button>
-        </div>
-      </uui-popover-container>
+      ${capabilities.delete
+        ? html`
+            <uui-popover-container id="more" placement="bottom-end">
+              <div class="menu">
+                <uui-button
+                  look="default"
+                  color="danger"
+                  data-mark="njobdesk:action:delete"
+                  label=${this.localize.term("njobdesk_actionDelete")}
+                  @click=${() => this.#dispatch("delete")}>
+                  <uui-icon name="icon-trash"></uui-icon>
+                  ${this.localize.term("njobdesk_actionDelete")}
+                </uui-button>
+              </div>
+            </uui-popover-container>
+          `
+        : nothing}
     `;
+  }
+
+  #renderPauseResume(capabilities: SchedulerCapabilities) {
+    if (!capabilities.pause) {
+      return nothing;
+    }
+
+    return this.state === "Paused"
+      ? html`
+          <uui-button
+            compact
+            look="secondary"
+            data-mark="njobdesk:action:resume"
+            label=${this.localize.term("njobdesk_actionResume")}
+            @click=${() => this.#dispatch("resume")}>
+            <uui-icon name="icon-refresh"></uui-icon>
+          </uui-button>
+        `
+      : html`
+          <uui-button
+            compact
+            look="secondary"
+            data-mark="njobdesk:action:pause"
+            label=${this.localize.term("njobdesk_actionPause")}
+            @click=${() => this.#dispatch("pause")}>
+            <uui-icon name="icon-pause"></uui-icon>
+          </uui-button>
+        `;
   }
 
   static styles = [

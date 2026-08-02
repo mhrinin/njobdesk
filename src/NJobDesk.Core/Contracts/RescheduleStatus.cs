@@ -7,4 +7,5 @@ public enum RescheduleStatus
     NotCronTrigger,
     InvalidCronExpression,
     InvalidTimeZone,
+    NotSupported,
 }

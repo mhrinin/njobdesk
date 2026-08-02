@@ -4,7 +4,9 @@ namespace NJobDesk.Core.Contracts;
 
 public record ExecutionHistoryFilter
 {
-    public string? JobGroup { get; init; }
+    public string? ProviderKey { get; init; }
+
+    public string? JobId { get; init; }
 
     public string? JobName { get; init; }
 

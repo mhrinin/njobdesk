@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { UUITextStyles } from "@umbraco-ui/uui-css/lib";
 import { NJobDeskModalBaseElement } from "./modal-base.element.js";
 import { ExecutionsService, type ExecutionLogModel, type ExecutionModel } from "../api/index.js";
+import { findProvider } from "../services/dashboard-state.js";
 import { formatDateTime, formatDuration } from "../utils/format.js";
 import type { NJobDeskKvItem } from "../components/kv-list.element.js";
 import "../components/modal-layout.element.js";
@@ -46,14 +47,18 @@ export class NJobDeskRunDetailsModalElement extends NJobDeskModalBaseElement<NJo
     return [
       {
         name: this.localize.term("njobdesk_colJob"),
-        value: `${execution.jobGroup}/${execution.jobName}`,
+        value: execution.jobGroup ? `${execution.jobGroup}/${execution.jobName}` : execution.jobName,
         monospace: true,
       },
-      {
-        name: this.localize.term("njobdesk_colTrigger"),
-        value: `${execution.triggerGroup}/${execution.triggerName}`,
-        monospace: true,
-      },
+      ...(execution.triggerName
+        ? [
+            {
+              name: this.localize.term("njobdesk_colTrigger"),
+              value: execution.triggerName,
+              monospace: true,
+            },
+          ]
+        : []),
       {
         name: this.localize.term("njobdesk_colStarted"),
         value: html`${formatDateTime(execution.startedUtc)}
@@ -73,8 +78,10 @@ export class NJobDeskRunDetailsModalElement extends NJobDeskModalBaseElement<NJo
       return nothing;
     }
 
+    const runLogs = findProvider(execution.providerKey)?.capabilities.runLogs ?? true;
     return html`
-      <njd-modal-layout headline=${`${execution.jobGroup}/${execution.jobName}`}>
+      <njd-modal-layout
+        headline=${execution.jobGroup ? `${execution.jobGroup}/${execution.jobName}` : execution.jobName}>
         <div class="uui-text layout">
           <div class="run-header" data-mark="njobdesk:run-header">
             <njd-state-tag kind="execution" .value=${execution.state}></njd-state-tag>
@@ -91,11 +98,15 @@ export class NJobDeskRunDetailsModalElement extends NJobDeskModalBaseElement<NJo
               `
             : nothing}
 
-          <uui-box headline=${this.localize.term("njobdesk_modalRunLogs")}>
-            ${execution.state === "Running"
-              ? html`<p class="running-note">${this.localize.term("njobdesk_logsPendingRun")}</p>`
-              : html`<njd-log-console .entries=${this._logs} ?loading=${this._loading}></njd-log-console>`}
-          </uui-box>
+          ${runLogs
+            ? html`
+                <uui-box headline=${this.localize.term("njobdesk_modalRunLogs")}>
+                  ${execution.state === "Running"
+                    ? html`<p class="running-note">${this.localize.term("njobdesk_logsPendingRun")}</p>`
+                    : html`<njd-log-console .entries=${this._logs} ?loading=${this._loading}></njd-log-console>`}
+                </uui-box>
+              `
+            : nothing}
         </div>
 
         <uui-button

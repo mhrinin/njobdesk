@@ -6,13 +6,15 @@ public record ExecutionModel
 {
     public long Id { get; init; }
 
-    public required string JobGroup { get; init; }
+    public string ProviderKey { get; init; } = string.Empty;
+
+    public required string JobId { get; init; }
 
     public required string JobName { get; init; }
 
-    public required string TriggerGroup { get; init; }
+    public string? JobGroup { get; init; }
 
-    public required string TriggerName { get; init; }
+    public string? TriggerName { get; init; }
 
     public DateTime StartedUtc { get; init; }
 

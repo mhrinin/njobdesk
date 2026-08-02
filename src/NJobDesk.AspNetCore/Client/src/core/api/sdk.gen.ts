@@ -64,35 +64,35 @@ export class JobsService {
     
     public static deleteJob<ThrowOnError extends boolean = false>(options: Options<DeleteJobData, ThrowOnError>) {
         return (options.client ?? client).delete<DeleteJobResponses, DeleteJobErrors, ThrowOnError>({
-            url: '/jobs/{group}/{name}',
+            url: '/jobs/{id}',
             ...options
         });
     }
     
     public static getJob<ThrowOnError extends boolean = false>(options: Options<GetJobData, ThrowOnError>) {
         return (options.client ?? client).get<GetJobResponses, GetJobErrors, ThrowOnError>({
-            url: '/jobs/{group}/{name}',
+            url: '/jobs/{id}',
             ...options
         });
     }
     
     public static triggerJob<ThrowOnError extends boolean = false>(options: Options<TriggerJobData, ThrowOnError>) {
         return (options.client ?? client).post<TriggerJobResponses, TriggerJobErrors, ThrowOnError>({
-            url: '/jobs/{group}/{name}/trigger',
+            url: '/jobs/{id}/trigger',
             ...options
         });
     }
     
     public static pauseJob<ThrowOnError extends boolean = false>(options: Options<PauseJobData, ThrowOnError>) {
         return (options.client ?? client).post<PauseJobResponses, PauseJobErrors, ThrowOnError>({
-            url: '/jobs/{group}/{name}/pause',
+            url: '/jobs/{id}/pause',
             ...options
         });
     }
     
     public static resumeJob<ThrowOnError extends boolean = false>(options: Options<ResumeJobData, ThrowOnError>) {
         return (options.client ?? client).post<ResumeJobResponses, ResumeJobErrors, ThrowOnError>({
-            url: '/jobs/{group}/{name}/resume',
+            url: '/jobs/{id}/resume',
             ...options
         });
     }
@@ -131,35 +131,35 @@ export class SchedulerService {
 export class TriggersService {
     public static pauseTrigger<ThrowOnError extends boolean = false>(options: Options<PauseTriggerData, ThrowOnError>) {
         return (options.client ?? client).post<PauseTriggerResponses, PauseTriggerErrors, ThrowOnError>({
-            url: '/triggers/{group}/{name}/pause',
+            url: '/triggers/{id}/pause',
             ...options
         });
     }
     
     public static resumeTrigger<ThrowOnError extends boolean = false>(options: Options<ResumeTriggerData, ThrowOnError>) {
         return (options.client ?? client).post<ResumeTriggerResponses, ResumeTriggerErrors, ThrowOnError>({
-            url: '/triggers/{group}/{name}/resume',
+            url: '/triggers/{id}/resume',
             ...options
         });
     }
     
     public static resetTriggerError<ThrowOnError extends boolean = false>(options: Options<ResetTriggerErrorData, ThrowOnError>) {
         return (options.client ?? client).post<ResetTriggerErrorResponses, ResetTriggerErrorErrors, ThrowOnError>({
-            url: '/triggers/{group}/{name}/reset-error',
+            url: '/triggers/{id}/reset-error',
             ...options
         });
     }
     
     public static unscheduleTrigger<ThrowOnError extends boolean = false>(options: Options<UnscheduleTriggerData, ThrowOnError>) {
         return (options.client ?? client).delete<UnscheduleTriggerResponses, UnscheduleTriggerErrors, ThrowOnError>({
-            url: '/triggers/{group}/{name}',
+            url: '/triggers/{id}',
             ...options
         });
     }
     
     public static rescheduleTrigger<ThrowOnError extends boolean = false>(options: Options<RescheduleTriggerData, ThrowOnError>) {
         return (options.client ?? client).put<RescheduleTriggerResponses, RescheduleTriggerErrors, ThrowOnError>({
-            url: '/triggers/{group}/{name}/schedule',
+            url: '/triggers/{id}/schedule',
             ...options,
             headers: {
                 'Content-Type': 'application/json',

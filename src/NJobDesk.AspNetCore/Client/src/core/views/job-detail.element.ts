@@ -1,4 +1,4 @@
-import { css, html } from "lit";
+import { css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { UUITextStyles } from "@umbraco-ui/uui-css/lib";
 import { NJobDeskElement } from "../element.js";
@@ -8,6 +8,7 @@ import { popoverMenuStyles } from "../utils/shared-styles.js";
 import { NJobDeskJobActionEvent } from "../components/job-actions-cell.element.js";
 import type { NJobDeskCronCellValue } from "../components/cron-cell.element.js";
 import "../components/trigger-actions-cell.element.js";
+import "../components/provider-tag.element.js";
 import "../components/state-tag.element.js";
 import "../components/cron-cell.element.js";
 import "../components/kv-list.element.js";
@@ -36,15 +37,25 @@ export class NJobDeskJobDetailElement extends NJobDeskElement {
       return html`<uui-loader-bar></uui-loader-bar>`;
     }
 
-    const jobId = `${detail.job.group}/${detail.job.name}`;
+    const jobId = detail.job.id;
+    const capabilities = detail.job.capabilities;
     const yesNo = (value: boolean) => this.localize.term(value ? "njobdesk_yes" : "njobdesk_no");
     const detailItems: NJobDeskKvItem[] = [
       { name: this.localize.term("njobdesk_detailJobType"), value: detail.job.jobType ?? "—", monospace: true },
       ...(detail.job.description
         ? [{ name: this.localize.term("njobdesk_detailDescription"), value: detail.job.description }]
         : []),
-      { name: this.localize.term("njobdesk_detailDurable"), value: yesNo(detail.job.durable) },
-      { name: this.localize.term("njobdesk_detailConcurrent"), value: yesNo(detail.job.concurrentExecutionDisallowed) },
+      ...(detail.job.durable != null
+        ? [{ name: this.localize.term("njobdesk_detailDurable"), value: yesNo(detail.job.durable) }]
+        : []),
+      ...(detail.job.concurrentExecutionDisallowed != null
+        ? [
+            {
+              name: this.localize.term("njobdesk_detailConcurrent"),
+              value: yesNo(detail.job.concurrentExecutionDisallowed),
+            },
+          ]
+        : []),
       { name: this.localize.term("njobdesk_detailSystemJob"), value: yesNo(detail.job.isSystemJob) },
     ];
 
@@ -59,57 +70,48 @@ export class NJobDeskJobDetailElement extends NJobDeskElement {
             @click=${() => this.dispatchEvent(new NJobDeskJobDetailCloseEvent())}>
             <uui-icon name="icon-arrow-left"></uui-icon>
           </uui-button>
-          <h3>${jobId}</h3>
+          <h3>${detail.job.group ? html`<span class="group">${detail.job.group} /</span> ` : nothing}${detail.job.name}</h3>
+          <njd-provider-tag .providerKey=${detail.job.providerKey}></njd-provider-tag>
           <njd-state-tag .value=${detail.job.state}></njd-state-tag>
           <div class="detail-actions" ?hidden=${this.#readOnly.readOnly}>
-            <uui-button
-              look="primary"
-              color="positive"
-              compact
-              data-mark="njobdesk:action:trigger"
-              label=${this.localize.term("njobdesk_actionTrigger")}
-              @click=${() => this.dispatchEvent(new NJobDeskJobActionEvent("trigger", jobId))}>
-              <uui-icon name="icon-play"></uui-icon>
-              ${this.localize.term("njobdesk_actionTrigger")}
-            </uui-button>
-            ${detail.job.state === "Paused"
+            ${capabilities.triggerNow
               ? html`
                   <uui-button
-                    look="secondary"
+                    look="primary"
+                    color="positive"
                     compact
-                    label=${this.localize.term("njobdesk_actionResume")}
-                    @click=${() => this.dispatchEvent(new NJobDeskJobActionEvent("resume", jobId))}>
-                    ${this.localize.term("njobdesk_actionResume")}
+                    data-mark="njobdesk:action:trigger"
+                    label=${this.localize.term("njobdesk_actionTrigger")}
+                    @click=${() => this.dispatchEvent(new NJobDeskJobActionEvent("trigger", jobId))}>
+                    <uui-icon name="icon-play"></uui-icon>
+                    ${this.localize.term("njobdesk_actionTrigger")}
                   </uui-button>
                 `
-              : html`
+              : nothing}
+            ${this.#renderPauseResume(detail, jobId)}
+            ${capabilities.delete
+              ? html`
                   <uui-button
-                    look="secondary"
                     compact
-                    label=${this.localize.term("njobdesk_actionPause")}
-                    @click=${() => this.dispatchEvent(new NJobDeskJobActionEvent("pause", jobId))}>
-                    ${this.localize.term("njobdesk_actionPause")}
+                    look="secondary"
+                    popovertarget="detail-more"
+                    label=${this.localize.term("njobdesk_actionMore")}>
+                    <uui-symbol-more></uui-symbol-more>
                   </uui-button>
-                `}
-            <uui-button
-              compact
-              look="secondary"
-              popovertarget="detail-more"
-              label=${this.localize.term("njobdesk_actionMore")}>
-              <uui-symbol-more></uui-symbol-more>
-            </uui-button>
-            <uui-popover-container id="detail-more" placement="bottom-end">
-              <div class="menu">
-                <uui-button
-                  look="default"
-                  color="danger"
-                  label=${this.localize.term("njobdesk_actionDelete")}
-                  @click=${() => this.dispatchEvent(new NJobDeskJobActionEvent("delete", jobId))}>
-                  <uui-icon name="icon-trash"></uui-icon>
-                  ${this.localize.term("njobdesk_actionDelete")}
-                </uui-button>
-              </div>
-            </uui-popover-container>
+                  <uui-popover-container id="detail-more" placement="bottom-end">
+                    <div class="menu">
+                      <uui-button
+                        look="default"
+                        color="danger"
+                        label=${this.localize.term("njobdesk_actionDelete")}
+                        @click=${() => this.dispatchEvent(new NJobDeskJobActionEvent("delete", jobId))}>
+                        <uui-icon name="icon-trash"></uui-icon>
+                        ${this.localize.term("njobdesk_actionDelete")}
+                      </uui-button>
+                    </div>
+                  </uui-popover-container>
+                `
+              : nothing}
           </div>
         </div>
 
@@ -128,6 +130,32 @@ export class NJobDeskJobDetailElement extends NJobDeskElement {
     `;
   }
 
+  #renderPauseResume(detail: JobDetailModel, jobId: string) {
+    if (!detail.job.capabilities.pause) {
+      return nothing;
+    }
+
+    return detail.job.state === "Paused"
+      ? html`
+          <uui-button
+            look="secondary"
+            compact
+            label=${this.localize.term("njobdesk_actionResume")}
+            @click=${() => this.dispatchEvent(new NJobDeskJobActionEvent("resume", jobId))}>
+            ${this.localize.term("njobdesk_actionResume")}
+          </uui-button>
+        `
+      : html`
+          <uui-button
+            look="secondary"
+            compact
+            label=${this.localize.term("njobdesk_actionPause")}
+            @click=${() => this.dispatchEvent(new NJobDeskJobActionEvent("pause", jobId))}>
+            ${this.localize.term("njobdesk_actionPause")}
+          </uui-button>
+        `;
+  }
+
   #renderTriggersTable(detail: JobDetailModel) {
     return html`
       <uui-table data-mark="njobdesk:table:triggers">
@@ -141,11 +169,10 @@ export class NJobDeskJobDetailElement extends NJobDeskElement {
           <uui-table-head-cell>${this.localize.term("njobdesk_colMisfire")}</uui-table-head-cell>
           <uui-table-head-cell class="right"></uui-table-head-cell>
         </uui-table-head>
-        ${detail.triggers.map((trigger: TriggerModel) => {
-          const triggerId = `${trigger.group}/${trigger.name}`;
-          return html`
+        ${detail.triggers.map(
+          (trigger: TriggerModel) => html`
             <uui-table-row>
-              <uui-table-cell>${triggerId}</uui-table-cell>
+              <uui-table-cell>${trigger.group ? `${trigger.group}/${trigger.name}` : trigger.name}</uui-table-cell>
               <uui-table-cell>${trigger.type}</uui-table-cell>
               <uui-table-cell>
                 <njd-state-tag .value=${trigger.state}></njd-state-tag>
@@ -167,16 +194,17 @@ export class NJobDeskJobDetailElement extends NJobDeskElement {
                   ? html`<njd-relative-time .date=${trigger.previousFireTimeUtc}></njd-relative-time>`
                   : "—"}
               </uui-table-cell>
-              <uui-table-cell>${trigger.misfireInstruction}</uui-table-cell>
+              <uui-table-cell>${trigger.misfireInstruction ?? "—"}</uui-table-cell>
               <uui-table-cell class="right">
                 <njd-trigger-actions-cell
-                  .triggerId=${triggerId}
+                  .triggerId=${trigger.id}
                   .state=${trigger.state}
-                  .type=${trigger.type}></njd-trigger-actions-cell>
+                  .type=${trigger.type}
+                  .capabilities=${detail.job.capabilities}></njd-trigger-actions-cell>
               </uui-table-cell>
             </uui-table-row>
-          `;
-        })}
+          `,
+        )}
       </uui-table>
     `;
   }
@@ -215,6 +243,10 @@ export class NJobDeskJobDetailElement extends NJobDeskElement {
         margin: 0;
         font-size: var(--uui-type-h4-size);
         font-weight: 400;
+      }
+
+      .detail-header h3 .group {
+        color: var(--uui-color-text-alt);
       }
 
       .detail-actions {

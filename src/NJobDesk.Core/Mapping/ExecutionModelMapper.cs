@@ -23,9 +23,10 @@ public static class ExecutionModelMapper
     public static ExecutionModel MapExecution(JobExecutionHistory entry) => new()
     {
         Id = entry.Id,
-        JobGroup = entry.JobGroup,
+        ProviderKey = entry.ProviderKey,
+        JobId = entry.JobId,
         JobName = entry.JobName,
-        TriggerGroup = entry.TriggerGroup,
+        JobGroup = entry.JobGroup,
         TriggerName = entry.TriggerName,
         StartedUtc = DateTime.SpecifyKind(entry.StartedUtc, DateTimeKind.Utc),
         FinishedUtc = entry.FinishedUtc is { } finishedUtc ? DateTime.SpecifyKind(finishedUtc, DateTimeKind.Utc) : null,

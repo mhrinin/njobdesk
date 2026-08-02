@@ -17,6 +17,11 @@ export type CronValidationResultModel = {
     nextFireTimesUtc: Array<string>;
 };
 
+export type DashboardStatusModel = {
+    readOnly: boolean;
+    providers: Array<ProviderStatusModel>;
+};
+
 export type ExecutionBucketModel = {
     hourStartUtc: string;
     succeeded: number;
@@ -36,10 +41,11 @@ export type ExecutionLogModel = {
 
 export type ExecutionModel = {
     id: number;
-    jobGroup: string;
+    providerKey: string;
+    jobId: string;
     jobName: string;
-    triggerGroup: string;
-    triggerName: string;
+    jobGroup?: string | null;
+    triggerName?: string | null;
     startedUtc: string;
     finishedUtc?: string | null;
     durationMs?: number | null;
@@ -65,18 +71,21 @@ export type JobDetailModel = {
 export type JobState = 'None' | 'Normal' | 'Paused' | 'Blocked' | 'Error' | 'Complete';
 
 export type JobSummaryModel = {
-    group: string;
+    id: string;
+    providerKey: string;
+    group?: string | null;
     name: string;
     description?: string | null;
     jobType?: string | null;
-    durable: boolean;
-    concurrentExecutionDisallowed: boolean;
+    durable?: boolean | null;
+    concurrentExecutionDisallowed?: boolean | null;
     triggerCount: number;
     scheduleSummary?: string | null;
     state: JobState;
     nextFireTimeUtc?: string | null;
     previousFireTimeUtc?: string | null;
     isSystemJob: boolean;
+    capabilities: SchedulerCapabilities;
 };
 
 export type JobSummaryModelPagedResult = {
@@ -93,12 +102,34 @@ export type ProblemDetails = {
     [key: string]: unknown | string | null | string | null | number | null | string | null | string | null | undefined;
 };
 
+export type ProviderStatusModel = {
+    key: string;
+    displayName: string;
+    providerVersion?: string | null;
+    capabilities: SchedulerCapabilities;
+    degraded: boolean;
+    error?: string | null;
+    status: SchedulerStatusModel;
+};
+
 export type RescheduleRequestModel = {
     cronExpression: string;
     timeZoneId?: string | null;
 };
 
-export type SchedulerState = 'NotConfigured' | 'Stopped' | 'Started' | 'Standby' | 'Shutdown';
+export type SchedulerCapabilities = {
+    triggerNow: boolean;
+    pause: boolean;
+    scheduleEditing: boolean;
+    delete: boolean;
+    groups: boolean;
+    triggers: boolean;
+    history: boolean;
+    runLogs: boolean;
+    interrupt: boolean;
+};
+
+export type SchedulerState = 'Stopped' | 'Started' | 'Standby' | 'Shutdown';
 
 export type SchedulerStatisticsModel = {
     jobsTotal: number;
@@ -114,17 +145,15 @@ export type SchedulerStatusModel = {
     schedulerName?: string | null;
     schedulerInstanceId?: string | null;
     clustered: boolean;
-    schedulerEnabled: boolean;
     historyEnabled: boolean;
     storeType?: string | null;
-    threadPoolSize: number;
+    threadPoolSize?: number | null;
     runningSinceUtc?: string | null;
-    providerVersion?: string | null;
-    readOnly: boolean;
 };
 
 export type TriggerModel = {
-    group: string;
+    id: string;
+    group?: string | null;
     name: string;
     description?: string | null;
     type: TriggerType;
@@ -136,8 +165,8 @@ export type TriggerModel = {
     previousFireTimeUtc?: string | null;
     startTimeUtc: string;
     endTimeUtc?: string | null;
-    misfireInstruction: string;
-    priority: number;
+    misfireInstruction?: string | null;
+    priority?: number | null;
 };
 
 export type TriggerType = 'Cron' | 'Simple' | 'Other';
@@ -164,7 +193,8 @@ export type GetExecutionsData = {
     query?: {
         skip?: number;
         take?: number;
-        jobGroup?: string;
+        provider?: string;
+        jobId?: string;
         jobName?: string;
         state?: ExecutionStatus;
         fromUtc?: string;
@@ -222,6 +252,7 @@ export type GetJobsData = {
     query?: {
         skip?: number;
         take?: number;
+        provider?: string;
         group?: string;
         filter?: string;
     };
@@ -240,11 +271,10 @@ export type GetJobsResponse = GetJobsResponses[keyof GetJobsResponses];
 export type DeleteJobData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/jobs/{group}/{name}';
+    url: '/njobdesk/api/v1/jobs/{id}';
 };
 
 export type DeleteJobErrors = {
@@ -266,11 +296,10 @@ export type DeleteJobResponses = {
 export type GetJobData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/jobs/{group}/{name}';
+    url: '/njobdesk/api/v1/jobs/{id}';
 };
 
 export type GetJobErrors = {
@@ -294,11 +323,10 @@ export type GetJobResponse = GetJobResponses[keyof GetJobResponses];
 export type TriggerJobData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/jobs/{group}/{name}/trigger';
+    url: '/njobdesk/api/v1/jobs/{id}/trigger';
 };
 
 export type TriggerJobErrors = {
@@ -322,11 +350,10 @@ export type TriggerJobResponse = TriggerJobResponses[keyof TriggerJobResponses];
 export type PauseJobData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/jobs/{group}/{name}/pause';
+    url: '/njobdesk/api/v1/jobs/{id}/pause';
 };
 
 export type PauseJobErrors = {
@@ -350,11 +377,10 @@ export type PauseJobResponse = PauseJobResponses[keyof PauseJobResponses];
 export type ResumeJobData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/jobs/{group}/{name}/resume';
+    url: '/njobdesk/api/v1/jobs/{id}/resume';
 };
 
 export type ResumeJobErrors = {
@@ -386,7 +412,7 @@ export type GetSchedulerStatusResponses = {
     /**
      * OK
      */
-    200: SchedulerStatusModel;
+    200: DashboardStatusModel;
 };
 
 export type GetSchedulerStatusResponse = GetSchedulerStatusResponses[keyof GetSchedulerStatusResponses];
@@ -418,7 +444,7 @@ export type PauseAllResponses = {
     /**
      * OK
      */
-    200: SchedulerStatusModel;
+    200: DashboardStatusModel;
 };
 
 export type PauseAllResponse = PauseAllResponses[keyof PauseAllResponses];
@@ -434,7 +460,7 @@ export type ResumeAllResponses = {
     /**
      * OK
      */
-    200: SchedulerStatusModel;
+    200: DashboardStatusModel;
 };
 
 export type ResumeAllResponse = ResumeAllResponses[keyof ResumeAllResponses];
@@ -442,11 +468,10 @@ export type ResumeAllResponse = ResumeAllResponses[keyof ResumeAllResponses];
 export type PauseTriggerData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/triggers/{group}/{name}/pause';
+    url: '/njobdesk/api/v1/triggers/{id}/pause';
 };
 
 export type PauseTriggerErrors = {
@@ -470,11 +495,10 @@ export type PauseTriggerResponse = PauseTriggerResponses[keyof PauseTriggerRespo
 export type ResumeTriggerData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/triggers/{group}/{name}/resume';
+    url: '/njobdesk/api/v1/triggers/{id}/resume';
 };
 
 export type ResumeTriggerErrors = {
@@ -498,11 +522,10 @@ export type ResumeTriggerResponse = ResumeTriggerResponses[keyof ResumeTriggerRe
 export type ResetTriggerErrorData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/triggers/{group}/{name}/reset-error';
+    url: '/njobdesk/api/v1/triggers/{id}/reset-error';
 };
 
 export type ResetTriggerErrorErrors = {
@@ -526,11 +549,10 @@ export type ResetTriggerErrorResponse = ResetTriggerErrorResponses[keyof ResetTr
 export type UnscheduleTriggerData = {
     body?: never;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/triggers/{group}/{name}';
+    url: '/njobdesk/api/v1/triggers/{id}';
 };
 
 export type UnscheduleTriggerErrors = {
@@ -552,11 +574,10 @@ export type UnscheduleTriggerResponses = {
 export type RescheduleTriggerData = {
     body?: RescheduleRequestModel;
     path: {
-        group: string;
-        name: string;
+        id: string;
     };
     query?: never;
-    url: '/njobdesk/api/v1/triggers/{group}/{name}/schedule';
+    url: '/njobdesk/api/v1/triggers/{id}/schedule';
 };
 
 export type RescheduleTriggerErrors = {

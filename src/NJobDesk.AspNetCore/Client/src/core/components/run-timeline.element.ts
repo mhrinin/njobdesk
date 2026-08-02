@@ -42,7 +42,7 @@ export class NJobDeskRunTimelineElement extends NJobDeskElement {
           <span class="node">${execution.schedulerInstanceId}</span>
           ${execution.errorMessage
             ? html`<span class="error" title=${execution.errorMessage}>${execution.errorMessage}</span>`
-            : html`<span class="trigger">${execution.triggerGroup}/${execution.triggerName}</span>`}
+            : html`<span class="trigger">${execution.triggerName ?? ""}</span>`}
           <uui-symbol-expand class="expand"></uui-symbol-expand>
         </button>
       </li>

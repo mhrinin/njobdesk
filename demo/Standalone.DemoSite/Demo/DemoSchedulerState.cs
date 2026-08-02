@@ -42,28 +42,28 @@ internal sealed class DemoSchedulerState
         }
     }
 
-    public DemoJob? FindJob(string group, string name)
+    public DemoJob? FindJob(string jobId)
     {
         lock (_lock)
         {
-            return _jobs.FirstOrDefault(job => job.Group == group && job.Name == name);
+            return _jobs.FirstOrDefault(job => job.Id == jobId);
         }
     }
 
-    public bool RemoveJob(string group, string name)
+    public bool RemoveJob(string jobId)
     {
         lock (_lock)
         {
-            return _jobs.RemoveAll(job => job.Group == group && job.Name == name) > 0;
+            return _jobs.RemoveAll(job => job.Id == jobId) > 0;
         }
     }
 
-    public bool SetTriggerState(string group, string name, JobState from, JobState to)
+    public bool SetTriggerState(string triggerId, JobState from, JobState to)
     {
         lock (_lock)
         {
             var trigger = _jobs.Select(job => job.Trigger)
-                .FirstOrDefault(t => t is not null && t.Group == group && t.Name == name);
+                .FirstOrDefault(candidate => candidate is not null && candidate.Id == triggerId);
             if (trigger is null || (from != JobState.None && trigger.State != from))
             {
                 return false;
@@ -74,9 +74,9 @@ internal sealed class DemoSchedulerState
         }
     }
 
-    public bool SetJobState(string group, string name, JobState to)
+    public bool SetJobState(string jobId, JobState to)
     {
-        if (FindJob(group, name) is not { Trigger: { } trigger })
+        if (FindJob(jobId) is not { Trigger: { } trigger })
         {
             return false;
         }
@@ -85,11 +85,11 @@ internal sealed class DemoSchedulerState
         return true;
     }
 
-    public bool RemoveTrigger(string group, string name)
+    public bool RemoveTrigger(string triggerId)
     {
         lock (_lock)
         {
-            var owner = _jobs.FirstOrDefault(job => job.Trigger is { } t && t.Group == group && t.Name == name);
+            var owner = _jobs.FirstOrDefault(job => job.Trigger is { } trigger && trigger.Id == triggerId);
             if (owner is null)
             {
                 return false;
@@ -124,9 +124,11 @@ internal sealed class DemoSchedulerState
                 Id = _nextExecutionId++,
                 FireInstanceId = Guid.NewGuid().ToString("N"),
                 SchedulerInstanceId = DemoInstanceId,
-                JobGroup = job.Group,
+                ProviderKey = DemoSchedulerProvider.Key,
+                JobId = job.Id,
                 JobName = job.Name,
-                TriggerGroup = job.Trigger?.Group ?? job.Group,
+                JobGroup = job.Group,
+                TriggerId = job.Trigger?.Id,
                 TriggerName = job.Trigger?.Name ?? $"{job.Name}-trigger",
                 StartedUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 Status = ExecutionStatus.Running,
@@ -267,9 +269,11 @@ internal sealed class DemoSchedulerState
             Id = _nextExecutionId++,
             FireInstanceId = Guid.NewGuid().ToString("N"),
             SchedulerInstanceId = DemoInstanceId,
-            JobGroup = job.Group,
+            ProviderKey = DemoSchedulerProvider.Key,
+            JobId = job.Id,
             JobName = job.Name,
-            TriggerGroup = job.Trigger!.Group,
+            JobGroup = job.Group,
+            TriggerId = job.Trigger!.Id,
             TriggerName = job.Trigger.Name,
             StartedUtc = startedUtc,
             FinishedUtc = startedUtc.AddMilliseconds(durationMs),
@@ -338,6 +342,8 @@ internal sealed class DemoSchedulerState
 
 internal sealed class DemoJob
 {
+    public string Id => $"{Group}.{Name}";
+
     public required string Group { get; init; }
 
     public required string Name { get; init; }
@@ -353,6 +359,8 @@ internal sealed class DemoJob
 
 internal sealed class DemoTrigger
 {
+    public string Id => $"{Group}.{Name}";
+
     public required string Group { get; init; }
 
     public required string Name { get; init; }

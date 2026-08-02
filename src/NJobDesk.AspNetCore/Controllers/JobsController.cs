@@ -2,12 +2,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NJobDesk.Core.Contracts;
 using NJobDesk.Core.Models;
-using NJobDesk.Core.Services;
+using NJobDesk.Core.Providers;
 
 namespace NJobDesk.AspNetCore.Controllers;
 
 [ApiExplorerSettings(GroupName = "Jobs")]
-public class JobsController(ISchedulerInfoService infoService, ISchedulerManagementService managementService)
+public class JobsController(IDashboardInfoService infoService, IDashboardManagementService managementService)
     : NJobDeskApiControllerBase
 {
     [HttpGet("jobs")]
@@ -16,37 +16,38 @@ public class JobsController(ISchedulerInfoService infoService, ISchedulerManagem
         CancellationToken cancellationToken,
         int skip = 0,
         int take = 50,
+        string? provider = null,
         string? group = null,
         string? filter = null) =>
-        infoService.GetJobsAsync(skip, take, group, filter, cancellationToken);
+        infoService.GetJobsAsync(skip, take, provider, group, filter, cancellationToken);
 
-    [HttpGet("jobs/{group}/{name}")]
+    [HttpGet("jobs/{id}")]
     [ProducesResponseType<JobDetailModel>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<JobDetailModel>> GetJob(string group, string name, CancellationToken cancellationToken) =>
-        await infoService.GetJobAsync(group, name, cancellationToken) is { } job ? job : NotFound();
+    public async Task<ActionResult<JobDetailModel>> GetJob(string id, CancellationToken cancellationToken) =>
+        await infoService.GetJobAsync(id, cancellationToken) is { } job ? job : NotFound();
 
-    [HttpPost("jobs/{group}/{name}/trigger")]
+    [HttpPost("jobs/{id}/trigger")]
     [ProducesResponseType<JobDetailModel>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public Task<ActionResult<JobDetailModel>> TriggerJob(string group, string name, CancellationToken cancellationToken) =>
-        ExecuteActionAsync(group, name, managementService.TriggerJobAsync, infoService.GetJobAsync, cancellationToken);
+    public Task<ActionResult<JobDetailModel>> TriggerJob(string id, CancellationToken cancellationToken) =>
+        ExecuteActionAsync(id, managementService.TriggerJobAsync, infoService.GetJobAsync, cancellationToken);
 
-    [HttpPost("jobs/{group}/{name}/pause")]
+    [HttpPost("jobs/{id}/pause")]
     [ProducesResponseType<JobDetailModel>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public Task<ActionResult<JobDetailModel>> PauseJob(string group, string name, CancellationToken cancellationToken) =>
-        ExecuteActionAsync(group, name, managementService.PauseJobAsync, infoService.GetJobAsync, cancellationToken);
+    public Task<ActionResult<JobDetailModel>> PauseJob(string id, CancellationToken cancellationToken) =>
+        ExecuteActionAsync(id, managementService.PauseJobAsync, infoService.GetJobAsync, cancellationToken);
 
-    [HttpPost("jobs/{group}/{name}/resume")]
+    [HttpPost("jobs/{id}/resume")]
     [ProducesResponseType<JobDetailModel>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public Task<ActionResult<JobDetailModel>> ResumeJob(string group, string name, CancellationToken cancellationToken) =>
-        ExecuteActionAsync(group, name, managementService.ResumeJobAsync, infoService.GetJobAsync, cancellationToken);
+    public Task<ActionResult<JobDetailModel>> ResumeJob(string id, CancellationToken cancellationToken) =>
+        ExecuteActionAsync(id, managementService.ResumeJobAsync, infoService.GetJobAsync, cancellationToken);
 
-    [HttpDelete("jobs/{group}/{name}")]
+    [HttpDelete("jobs/{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteJob(string group, string name, CancellationToken cancellationToken) =>
-        await managementService.DeleteJobAsync(group, name, cancellationToken) ? Ok() : NotFound();
+    public async Task<IActionResult> DeleteJob(string id, CancellationToken cancellationToken) =>
+        await managementService.DeleteJobAsync(id, cancellationToken) ? Ok() : NotFound();
 }

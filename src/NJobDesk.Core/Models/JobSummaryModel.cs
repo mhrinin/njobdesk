@@ -1,8 +1,14 @@
+using NJobDesk.Core.Providers;
+
 namespace NJobDesk.Core.Models;
 
 public record JobSummaryModel
 {
-    public required string Group { get; init; }
+    public required string Id { get; init; }
+
+    public string ProviderKey { get; init; } = string.Empty;
+
+    public string? Group { get; init; }
 
     public required string Name { get; init; }
 
@@ -10,9 +16,9 @@ public record JobSummaryModel
 
     public string? JobType { get; init; }
 
-    public bool Durable { get; init; }
+    public bool? Durable { get; init; }
 
-    public bool ConcurrentExecutionDisallowed { get; init; }
+    public bool? ConcurrentExecutionDisallowed { get; init; }
 
     public int TriggerCount { get; init; }
 
@@ -25,4 +31,6 @@ public record JobSummaryModel
     public DateTime? PreviousFireTimeUtc { get; init; }
 
     public bool IsSystemJob { get; init; }
+
+    public required SchedulerCapabilities Capabilities { get; init; }
 }

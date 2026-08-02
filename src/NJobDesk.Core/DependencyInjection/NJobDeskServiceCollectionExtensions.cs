@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NJobDesk.Core.Configuration;
+using NJobDesk.Core.Providers;
 using NJobDesk.Core.Services;
 using NJobDesk.Core.Store;
 
@@ -10,11 +11,12 @@ namespace NJobDesk.Core.DependencyInjection;
 public static class NJobDeskServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the dashboard core services with scheduler-agnostic defaults: without a provider
-    /// package the info/management services answer "not configured" and history is empty. Provider
-    /// packages replace those registrations. Safe to call multiple times; the first call decides the
-    /// configuration section every NJobDesk option binds from. Returns a <see cref="NJobDeskBuilder"/>
-    /// that feature packages extend.
+    /// Registers the dashboard core services: the provider registry, the aggregating dashboard
+    /// services the API consumes, and scheduler-agnostic defaults (Cronos cron validation, empty
+    /// history). Scheduler providers plug in through <see cref="NJobDeskBuilder.AddProvider{TProvider}"/>;
+    /// without one the dashboard shows an unconfigured state. Safe to call multiple times; the first
+    /// call decides the configuration section every NJobDesk option binds from. Returns a
+    /// <see cref="NJobDeskBuilder"/> that feature packages extend.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="sectionName">Configuration section NJobDesk feature options bind from.</param>
@@ -31,8 +33,9 @@ public static class NJobDeskServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ICronService, CronosCronService>();
         services.TryAddSingleton<IExecutionHistoryStore, EmptyExecutionHistoryStore>();
-        services.TryAddSingleton<ISchedulerInfoService, NotConfiguredSchedulerInfoService>();
-        services.TryAddSingleton<ISchedulerManagementService, NotConfiguredSchedulerManagementService>();
+        services.TryAddSingleton<ISchedulerProviderRegistry, SchedulerProviderRegistry>();
+        services.TryAddSingleton<IDashboardInfoService, AggregatingDashboardInfoService>();
+        services.TryAddSingleton<IDashboardManagementService, AggregatingDashboardManagementService>();
 
         return new NJobDeskBuilder(services, sectionName);
     }

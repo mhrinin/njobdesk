@@ -1,21 +1,21 @@
 using Microsoft.OpenApi.Writers;
 using NJobDesk.AspNetCore.DependencyInjection;
 using NJobDesk.AspNetCore.Hosting;
-using NJobDesk.Core.Services;
 using NJobDesk.Core.Store;
 using Standalone.DemoSite.Demo;
 using Swashbuckle.AspNetCore.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Demo provider registrations must precede AddNJobDeskApi so its TryAdd defaults yield.
+// The shared history store must precede AddNJobDeskApi so its TryAdd default (empty) yields.
 builder.Services.AddSingleton<DemoSchedulerState>();
-builder.Services.AddSingleton<ISchedulerInfoService, DemoSchedulerInfoService>();
-builder.Services.AddSingleton<ISchedulerManagementService, DemoSchedulerManagementService>();
 builder.Services.AddSingleton<IExecutionHistoryStore, DemoExecutionHistoryStore>();
 
 builder.Services
     .AddNJobDeskApi()
+    .AddProvider<DemoSchedulerProvider>()
+    .AddProvider<BasicSchedulerProvider>()
+    .AddProvider<FlakySchedulerProvider>()
     .Services
     .AddApiVersioning()
     .AddApiExplorer(explorer =>

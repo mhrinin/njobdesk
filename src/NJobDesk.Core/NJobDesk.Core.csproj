@@ -9,7 +9,7 @@
     <PackageId>NJobDesk.Core</PackageId>
     <Product>NJobDesk.Core</Product>
     <Title>NJobDesk core contracts</Title>
-    <Description>Core contracts and models for NJobDesk, a scheduler-agnostic jobs dashboard for .NET: scheduler info/management abstractions, execution-history store contract, cron validation, and the null-object fallbacks providers build on. No HTTP surface, no scheduler dependency. Install NJobDesk.AspNetCore for the dashboard API and UI, plus a provider package (Quartz via uQuartz, Hangfire, Umbraco).</Description>
+    <Description>Core contracts and models for NJobDesk, a scheduler-agnostic jobs dashboard for .NET: the scheduler provider abstraction (descriptor, capabilities, registry, multi-provider aggregation with fault isolation), info/management contracts, execution-history store contract, and cron validation. No HTTP surface, no scheduler dependency. Install NJobDesk.AspNetCore for the dashboard API and UI, plus a provider package (Quartz via uQuartz, Hangfire, Umbraco).</Description>
     <PackageTags>jobs scheduler dashboard background-jobs quartz hangfire umbraco</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
@@ -22,6 +22,7 @@
     <PackageReference Include="CronExpressionDescriptor" />
     <PackageReference Include="Cronos" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

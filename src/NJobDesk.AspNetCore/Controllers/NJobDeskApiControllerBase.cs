@@ -12,18 +12,17 @@ namespace NJobDesk.AspNetCore.Controllers;
 public abstract class NJobDeskApiControllerBase : ControllerBase
 {
     private protected async Task<ActionResult<TModel>> ExecuteActionAsync<TModel>(
-        string group,
-        string name,
-        Func<string, string, CancellationToken, Task<bool>> action,
-        Func<string, string, CancellationToken, Task<TModel?>> fetch,
+        string id,
+        Func<string, CancellationToken, Task<bool>> action,
+        Func<string, CancellationToken, Task<TModel?>> fetch,
         CancellationToken cancellationToken)
         where TModel : class
     {
-        if (!await action(group, name, cancellationToken))
+        if (!await action(id, cancellationToken))
         {
             return NotFound();
         }
 
-        return await fetch(group, name, cancellationToken) is { } model ? model : NotFound();
+        return await fetch(id, cancellationToken) is { } model ? model : NotFound();
     }
 }

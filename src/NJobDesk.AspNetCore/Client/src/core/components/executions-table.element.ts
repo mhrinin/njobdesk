@@ -4,6 +4,7 @@ import { NJobDeskElement } from "../element.js";
 import type { ExecutionModel } from "../api/index.js";
 import { elapsedSince, formatDuration } from "../utils/format.js";
 import { NJobDeskRunOpenEvent } from "./run-open.event.js";
+import "./provider-tag.element.js";
 import "./state-tag.element.js";
 import "./error-cell.element.js";
 import "./relative-time.element.js";
@@ -25,8 +26,9 @@ export class NJobDeskExecutionsTableElement extends NJobDeskElement {
             class="job-link"
             style="all: unset; cursor: pointer; color: var(--uui-color-interactive); font-weight: 600"
             @click=${() => this.dispatchEvent(new NJobDeskRunOpenEvent(execution))}>
-            ${execution.jobGroup}/${execution.jobName}
+            ${execution.jobGroup ? `${execution.jobGroup}/${execution.jobName}` : execution.jobName}
           </button>
+          <njd-provider-tag .providerKey=${execution.providerKey}></njd-provider-tag>
         </uui-table-cell>
         <uui-table-cell>
           <njd-state-tag kind="execution" .value=${execution.state}></njd-state-tag>

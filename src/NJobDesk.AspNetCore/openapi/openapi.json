@@ -70,7 +70,14 @@
             }
           },
           {
-            "name": "jobGroup",
+            "name": "provider",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobId",
             "in": "query",
             "schema": {
               "type": "string"
@@ -204,6 +211,13 @@
             }
           },
           {
+            "name": "provider",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "group",
             "in": "query",
             "schema": {
@@ -232,7 +246,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/jobs/{group}/{name}": {
+    "/njobdesk/api/v1/jobs/{id}": {
       "get": {
         "tags": [
           "Jobs"
@@ -240,15 +254,7 @@
         "operationId": "getJob",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -286,15 +292,7 @@
         "operationId": "deleteJob",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -319,7 +317,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/jobs/{group}/{name}/trigger": {
+    "/njobdesk/api/v1/jobs/{id}/trigger": {
       "post": {
         "tags": [
           "Jobs"
@@ -327,15 +325,7 @@
         "operationId": "triggerJob",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -367,7 +357,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/jobs/{group}/{name}/pause": {
+    "/njobdesk/api/v1/jobs/{id}/pause": {
       "post": {
         "tags": [
           "Jobs"
@@ -375,15 +365,7 @@
         "operationId": "pauseJob",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -415,7 +397,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/jobs/{group}/{name}/resume": {
+    "/njobdesk/api/v1/jobs/{id}/resume": {
       "post": {
         "tags": [
           "Jobs"
@@ -423,15 +405,7 @@
         "operationId": "resumeJob",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -475,7 +449,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SchedulerStatusModel"
+                  "$ref": "#/components/schemas/DashboardStatusModel"
                 }
               }
             }
@@ -515,7 +489,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SchedulerStatusModel"
+                  "$ref": "#/components/schemas/DashboardStatusModel"
                 }
               }
             }
@@ -535,7 +509,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SchedulerStatusModel"
+                  "$ref": "#/components/schemas/DashboardStatusModel"
                 }
               }
             }
@@ -543,7 +517,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/triggers/{group}/{name}/pause": {
+    "/njobdesk/api/v1/triggers/{id}/pause": {
       "post": {
         "tags": [
           "Triggers"
@@ -551,15 +525,7 @@
         "operationId": "pauseTrigger",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -591,7 +557,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/triggers/{group}/{name}/resume": {
+    "/njobdesk/api/v1/triggers/{id}/resume": {
       "post": {
         "tags": [
           "Triggers"
@@ -599,15 +565,7 @@
         "operationId": "resumeTrigger",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -639,7 +597,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/triggers/{group}/{name}/reset-error": {
+    "/njobdesk/api/v1/triggers/{id}/reset-error": {
       "post": {
         "tags": [
           "Triggers"
@@ -647,15 +605,7 @@
         "operationId": "resetTriggerError",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -687,7 +637,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/triggers/{group}/{name}": {
+    "/njobdesk/api/v1/triggers/{id}": {
       "delete": {
         "tags": [
           "Triggers"
@@ -695,15 +645,7 @@
         "operationId": "unscheduleTrigger",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -728,7 +670,7 @@
         }
       }
     },
-    "/njobdesk/api/v1/triggers/{group}/{name}/schedule": {
+    "/njobdesk/api/v1/triggers/{id}/schedule": {
       "put": {
         "tags": [
           "Triggers"
@@ -736,15 +678,7 @@
         "operationId": "rescheduleTrigger",
         "parameters": [
           {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "name",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -857,6 +791,25 @@
         },
         "additionalProperties": false
       },
+      "DashboardStatusModel": {
+        "required": [
+          "providers",
+          "readOnly"
+        ],
+        "type": "object",
+        "properties": {
+          "readOnly": {
+            "type": "boolean"
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderStatusModel"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "ExecutionBucketModel": {
         "required": [
           "failed",
@@ -927,14 +880,13 @@
       "ExecutionModel": {
         "required": [
           "id",
-          "jobGroup",
+          "jobId",
           "jobName",
+          "providerKey",
           "recovering",
           "schedulerInstanceId",
           "startedUtc",
-          "state",
-          "triggerGroup",
-          "triggerName"
+          "state"
         ],
         "type": "object",
         "properties": {
@@ -942,17 +894,22 @@
             "type": "integer",
             "format": "int64"
           },
-          "jobGroup": {
+          "providerKey": {
+            "type": "string"
+          },
+          "jobId": {
             "type": "string"
           },
           "jobName": {
             "type": "string"
           },
-          "triggerGroup": {
-            "type": "string"
+          "jobGroup": {
+            "type": "string",
+            "nullable": true
           },
           "triggerName": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "startedUtc": {
             "type": "string",
@@ -1052,18 +1009,25 @@
       },
       "JobSummaryModel": {
         "required": [
-          "concurrentExecutionDisallowed",
-          "durable",
-          "group",
+          "capabilities",
+          "id",
           "isSystemJob",
           "name",
+          "providerKey",
           "state",
           "triggerCount"
         ],
         "type": "object",
         "properties": {
-          "group": {
+          "id": {
             "type": "string"
+          },
+          "providerKey": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string",
+            "nullable": true
           },
           "name": {
             "type": "string"
@@ -1077,10 +1041,12 @@
             "nullable": true
           },
           "durable": {
-            "type": "boolean"
+            "type": "boolean",
+            "nullable": true
           },
           "concurrentExecutionDisallowed": {
-            "type": "boolean"
+            "type": "boolean",
+            "nullable": true
           },
           "triggerCount": {
             "type": "integer",
@@ -1105,6 +1071,9 @@
           },
           "isSystemJob": {
             "type": "boolean"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/SchedulerCapabilities"
           }
         },
         "additionalProperties": false
@@ -1156,6 +1125,42 @@
         },
         "additionalProperties": { }
       },
+      "ProviderStatusModel": {
+        "required": [
+          "capabilities",
+          "degraded",
+          "displayName",
+          "key",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "providerVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/SchedulerCapabilities"
+          },
+          "degraded": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/SchedulerStatusModel"
+          }
+        },
+        "additionalProperties": false
+      },
       "RescheduleRequestModel": {
         "required": [
           "cronExpression"
@@ -1172,9 +1177,52 @@
         },
         "additionalProperties": false
       },
+      "SchedulerCapabilities": {
+        "required": [
+          "delete",
+          "groups",
+          "history",
+          "interrupt",
+          "pause",
+          "runLogs",
+          "scheduleEditing",
+          "triggerNow",
+          "triggers"
+        ],
+        "type": "object",
+        "properties": {
+          "triggerNow": {
+            "type": "boolean"
+          },
+          "pause": {
+            "type": "boolean"
+          },
+          "scheduleEditing": {
+            "type": "boolean"
+          },
+          "delete": {
+            "type": "boolean"
+          },
+          "groups": {
+            "type": "boolean"
+          },
+          "triggers": {
+            "type": "boolean"
+          },
+          "history": {
+            "type": "boolean"
+          },
+          "runLogs": {
+            "type": "boolean"
+          },
+          "interrupt": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "SchedulerState": {
         "enum": [
-          "NotConfigured",
           "Stopped",
           "Started",
           "Standby",
@@ -1226,10 +1274,7 @@
         "required": [
           "clustered",
           "historyEnabled",
-          "readOnly",
-          "schedulerEnabled",
-          "state",
-          "threadPoolSize"
+          "state"
         ],
         "type": "object",
         "properties": {
@@ -1247,9 +1292,6 @@
           "clustered": {
             "type": "boolean"
           },
-          "schedulerEnabled": {
-            "type": "boolean"
-          },
           "historyEnabled": {
             "type": "boolean"
           },
@@ -1259,37 +1301,33 @@
           },
           "threadPoolSize": {
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           },
           "runningSinceUtc": {
             "type": "string",
             "format": "date-time",
             "nullable": true
-          },
-          "providerVersion": {
-            "type": "string",
-            "nullable": true
-          },
-          "readOnly": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
       },
       "TriggerModel": {
         "required": [
-          "group",
-          "misfireInstruction",
+          "id",
           "name",
-          "priority",
           "startTimeUtc",
           "state",
           "type"
         ],
         "type": "object",
         "properties": {
-          "group": {
+          "id": {
             "type": "string"
+          },
+          "group": {
+            "type": "string",
+            "nullable": true
           },
           "name": {
             "type": "string"
@@ -1336,11 +1374,13 @@
             "nullable": true
           },
           "misfireInstruction": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "priority": {
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
           }
         },
         "additionalProperties": false

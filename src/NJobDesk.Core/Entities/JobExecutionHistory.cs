@@ -8,13 +8,17 @@ public class JobExecutionHistory
 
     public required string SchedulerInstanceId { get; set; }
 
-    public required string JobGroup { get; set; }
+    public required string ProviderKey { get; set; }
+
+    public required string JobId { get; set; }
 
     public required string JobName { get; set; }
 
-    public required string TriggerGroup { get; set; }
+    public string? JobGroup { get; set; }
 
-    public required string TriggerName { get; set; }
+    public string? TriggerId { get; set; }
+
+    public string? TriggerName { get; set; }
 
     public DateTime StartedUtc { get; set; }
 

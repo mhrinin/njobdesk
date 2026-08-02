@@ -18,12 +18,10 @@ internal sealed class DemoSchedulerInfoService(
             SchedulerName = "DemoScheduler",
             SchedulerInstanceId = "demo-instance",
             Clustered = false,
-            SchedulerEnabled = true,
             HistoryEnabled = true,
             StoreType = "InMemoryDemoStore",
             ThreadPoolSize = 4,
             RunningSinceUtc = state.StartedUtc,
-            ProviderVersion = "demo",
         });
 
     public async Task<SchedulerStatisticsModel> GetStatisticsAsync(CancellationToken cancellationToken = default)
@@ -62,15 +60,16 @@ internal sealed class DemoSchedulerInfoService(
         return Task.FromResult(new PagedResult<JobSummaryModel>(jobs.Count, page.ToList()));
     }
 
-    public async Task<JobDetailModel?> GetJobAsync(string group, string name, CancellationToken cancellationToken = default)
+    public async Task<JobDetailModel?> GetJobAsync(string jobId, CancellationToken cancellationToken = default)
     {
-        if (state.FindJob(group, name) is not { } job)
+        if (state.FindJob(jobId) is not { } job)
         {
             return null;
         }
 
         var recent = await historyStore.GetPageAsync(
-            new ExecutionHistoryFilter { JobGroup = group, JobName = name, Take = 10 }, cancellationToken);
+            new ExecutionHistoryFilter { ProviderKey = DemoSchedulerProvider.Key, JobId = job.Id, Take = 10 },
+            cancellationToken);
 
         return new JobDetailModel
         {
@@ -80,10 +79,10 @@ internal sealed class DemoSchedulerInfoService(
         };
     }
 
-    public Task<TriggerModel?> GetTriggerAsync(string group, string name, CancellationToken cancellationToken = default)
+    public Task<TriggerModel?> GetTriggerAsync(string triggerId, CancellationToken cancellationToken = default)
     {
         var trigger = state.Jobs.Select(job => job.Trigger)
-            .FirstOrDefault(t => t is not null && t.Group == group && t.Name == name);
+            .FirstOrDefault(candidate => candidate is not null && candidate.Id == triggerId);
         return Task.FromResult(trigger is null ? null : MapTrigger(trigger));
     }
 
@@ -98,6 +97,7 @@ internal sealed class DemoSchedulerInfoService(
         var trigger = job.Trigger;
         return new JobSummaryModel
         {
+            Id = job.Id,
             Group = job.Group,
             Name = job.Name,
             Description = job.Description,
@@ -110,11 +110,13 @@ internal sealed class DemoSchedulerInfoService(
             NextFireTimeUtc = trigger?.State is JobState.Normal ? trigger.NextFireTimeUtc(timeProvider) : null,
             PreviousFireTimeUtc = null,
             IsSystemJob = job.IsSystemJob,
+            Capabilities = DemoSchedulerProvider.JobCapabilities,
         };
     }
 
     private TriggerModel MapTrigger(DemoTrigger trigger) => new()
     {
+        Id = trigger.Id,
         Group = trigger.Group,
         Name = trigger.Name,
         Type = TriggerType.Cron,

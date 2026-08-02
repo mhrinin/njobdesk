@@ -10,17 +10,11 @@ public record SchedulerStatusModel
 
     public bool Clustered { get; init; }
 
-    public bool SchedulerEnabled { get; init; }
-
     public bool HistoryEnabled { get; init; }
 
     public string? StoreType { get; init; }
 
-    public int ThreadPoolSize { get; init; }
+    public int? ThreadPoolSize { get; init; }
 
     public DateTime? RunningSinceUtc { get; init; }
-
-    public string? ProviderVersion { get; init; }
-
-    public bool ReadOnly { get; init; }
 }

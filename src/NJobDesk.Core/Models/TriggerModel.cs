@@ -2,7 +2,9 @@ namespace NJobDesk.Core.Models;
 
 public record TriggerModel
 {
-    public required string Group { get; init; }
+    public required string Id { get; init; }
+
+    public string? Group { get; init; }
 
     public required string Name { get; init; }
 
@@ -26,7 +28,7 @@ public record TriggerModel
 
     public DateTime? EndTimeUtc { get; init; }
 
-    public required string MisfireInstruction { get; init; }
+    public string? MisfireInstruction { get; init; }
 
-    public int Priority { get; init; }
+    public int? Priority { get; init; }
 }

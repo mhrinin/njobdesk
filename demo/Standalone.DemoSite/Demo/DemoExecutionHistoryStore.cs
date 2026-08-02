@@ -11,7 +11,8 @@ internal sealed class DemoExecutionHistoryStore(DemoSchedulerState state, TimePr
     {
         var (items, _) = state.SnapshotHistory();
         var query = items
-            .Where(entry => filter.JobGroup is null || entry.JobGroup == filter.JobGroup)
+            .Where(entry => filter.ProviderKey is null || entry.ProviderKey == filter.ProviderKey)
+            .Where(entry => filter.JobId is null || entry.JobId == filter.JobId)
             .Where(entry => filter.JobName is null || entry.JobName.Contains(filter.JobName, StringComparison.OrdinalIgnoreCase))
             .Where(entry => filter.Status is null || entry.Status == filter.Status)
             .Where(entry => filter.FromUtc is null || entry.StartedUtc >= filter.FromUtc)

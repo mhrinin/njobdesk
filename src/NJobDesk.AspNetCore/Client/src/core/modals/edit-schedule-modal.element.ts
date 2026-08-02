@@ -6,7 +6,7 @@ import { formatDateTime } from "../utils/format.js";
 import "../components/modal-layout.element.js";
 
 export interface NJobDeskEditScheduleModalData {
-  group: string;
+  triggerId: string;
   name: string;
   cronExpression: string;
   timeZoneId?: string | null;
@@ -81,7 +81,7 @@ export class NJobDeskEditScheduleModalElement extends NJobDeskModalBaseElement<N
     this._saving = true;
     this._saveError = undefined;
     const response = await TriggersService.rescheduleTrigger({
-      path: { group: this.data.group, name: this.data.name },
+      path: { id: this.data.triggerId },
       body: { cronExpression: this._cronExpression.trim(), timeZoneId: this.data.timeZoneId },
     });
     this._saving = false;
@@ -99,7 +99,7 @@ export class NJobDeskEditScheduleModalElement extends NJobDeskModalBaseElement<N
     return html`
       <njd-modal-layout headline=${this.localize.term("njobdesk_modalEditScheduleHeadline")}>
         <uui-box>
-          <p class="trigger-name">${this.data?.group}/${this.data?.name}</p>
+          <p class="trigger-name">${this.data?.name}</p>
           <uui-form-layout-item>
             <uui-label slot="label" for="cron">${this.localize.term("njobdesk_colCron")}</uui-label>
             <uui-input

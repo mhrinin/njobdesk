@@ -9,9 +9,9 @@ internal sealed class DemoSchedulerManagementService(
     ICronService cronService,
     ISchedulerInfoService infoService) : ISchedulerManagementService
 {
-    public Task<bool> TriggerJobAsync(string group, string name, CancellationToken cancellationToken = default)
+    public Task<bool> TriggerJobAsync(string jobId, CancellationToken cancellationToken = default)
     {
-        if (state.FindJob(group, name) is not { } job)
+        if (state.FindJob(jobId) is not { } job)
         {
             return Task.FromResult(false);
         }
@@ -21,26 +21,26 @@ internal sealed class DemoSchedulerManagementService(
         return Task.FromResult(true);
     }
 
-    public Task<bool> PauseJobAsync(string group, string name, CancellationToken cancellationToken = default) =>
-        Task.FromResult(state.SetJobState(group, name, JobState.Paused));
+    public Task<bool> PauseJobAsync(string jobId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(state.SetJobState(jobId, JobState.Paused));
 
-    public Task<bool> ResumeJobAsync(string group, string name, CancellationToken cancellationToken = default) =>
-        Task.FromResult(state.SetJobState(group, name, JobState.Normal));
+    public Task<bool> ResumeJobAsync(string jobId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(state.SetJobState(jobId, JobState.Normal));
 
-    public Task<bool> DeleteJobAsync(string group, string name, CancellationToken cancellationToken = default) =>
-        Task.FromResult(state.RemoveJob(group, name));
+    public Task<bool> DeleteJobAsync(string jobId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(state.RemoveJob(jobId));
 
-    public Task<bool> PauseTriggerAsync(string group, string name, CancellationToken cancellationToken = default) =>
-        Task.FromResult(state.SetTriggerState(group, name, JobState.None, JobState.Paused));
+    public Task<bool> PauseTriggerAsync(string triggerId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(state.SetTriggerState(triggerId, JobState.None, JobState.Paused));
 
-    public Task<bool> ResumeTriggerAsync(string group, string name, CancellationToken cancellationToken = default) =>
-        Task.FromResult(state.SetTriggerState(group, name, JobState.None, JobState.Normal));
+    public Task<bool> ResumeTriggerAsync(string triggerId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(state.SetTriggerState(triggerId, JobState.None, JobState.Normal));
 
-    public Task<bool> ResetTriggerFromErrorAsync(string group, string name, CancellationToken cancellationToken = default) =>
-        Task.FromResult(state.SetTriggerState(group, name, JobState.Error, JobState.Normal));
+    public Task<bool> ResetTriggerFromErrorAsync(string triggerId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(state.SetTriggerState(triggerId, JobState.Error, JobState.Normal));
 
-    public Task<bool> UnscheduleTriggerAsync(string group, string name, CancellationToken cancellationToken = default) =>
-        Task.FromResult(state.RemoveTrigger(group, name));
+    public Task<bool> UnscheduleTriggerAsync(string triggerId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(state.RemoveTrigger(triggerId));
 
     public Task PauseAllAsync(CancellationToken cancellationToken = default)
     {
@@ -55,10 +55,10 @@ internal sealed class DemoSchedulerManagementService(
     }
 
     public async Task<RescheduleResult> RescheduleAsync(
-        string group, string name, RescheduleRequestModel request, CancellationToken cancellationToken = default)
+        string triggerId, RescheduleRequestModel request, CancellationToken cancellationToken = default)
     {
         var trigger = state.Jobs.Select(job => job.Trigger)
-            .FirstOrDefault(t => t is not null && t.Group == group && t.Name == name);
+            .FirstOrDefault(candidate => candidate is not null && candidate.Id == triggerId);
         if (trigger is null)
         {
             return new RescheduleResult(RescheduleStatus.TriggerNotFound);
@@ -72,7 +72,7 @@ internal sealed class DemoSchedulerManagementService(
 
         trigger.CronExpression = request.CronExpression;
         trigger.TimeZoneId = request.TimeZoneId;
-        var updated = await infoService.GetTriggerAsync(group, name, cancellationToken);
+        var updated = await infoService.GetTriggerAsync(triggerId, cancellationToken);
         return new RescheduleResult(RescheduleStatus.Success, Trigger: updated);
     }
 

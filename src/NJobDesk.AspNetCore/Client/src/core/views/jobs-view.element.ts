@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { UUITextStyles } from "@umbraco-ui/uui-css/lib";
 import type { UUIPaginationEvent } from "@umbraco-ui/uui";
 import { NJobDeskElement } from "../element.js";
+import { ProvidersController } from "../services/dashboard-state.js";
 import { confirm, openModal } from "../services/modal.service.js";
 import { notify, type NotificationColor } from "../services/notification.service.js";
 import {
@@ -29,6 +30,7 @@ import { NJobDeskJobDetailCloseEvent } from "./job-detail.element.js";
 import "../modals/edit-schedule-modal.element.js";
 import "../components/job-link-cell.element.js";
 import "../components/job-actions-cell.element.js";
+import "../components/provider-tag.element.js";
 import "../components/state-tag.element.js";
 import "../components/cron-cell.element.js";
 import "../components/relative-time.element.js";
@@ -38,24 +40,18 @@ import "./job-detail.element.js";
 const PageSize = 20;
 const StateChips: Array<JobState | undefined> = [undefined, "Normal", "Paused", "Error"];
 
-function splitId(id: string): { group: string; name: string } {
-  const separatorIndex = id.indexOf("/");
-  return { group: id.slice(0, separatorIndex), name: id.slice(separatorIndex + 1) };
-}
-
-type NJobDeskKeyPath = ReturnType<typeof splitId>;
-type SimpleAction = [(path: NJobDeskKeyPath) => Promise<{ error?: unknown }>, string];
+type SimpleAction = [(id: string) => Promise<{ error?: unknown }>, string];
 
 const SimpleJobActions: Partial<Record<NJobDeskJobAction, SimpleAction>> = {
-  trigger: [(path) => JobsService.triggerJob({ path }), "njobdesk_toastTriggered"],
-  pause: [(path) => JobsService.pauseJob({ path }), "njobdesk_toastPaused"],
-  resume: [(path) => JobsService.resumeJob({ path }), "njobdesk_toastResumed"],
+  trigger: [(id) => JobsService.triggerJob({ path: { id } }), "njobdesk_toastTriggered"],
+  pause: [(id) => JobsService.pauseJob({ path: { id } }), "njobdesk_toastPaused"],
+  resume: [(id) => JobsService.resumeJob({ path: { id } }), "njobdesk_toastResumed"],
 };
 
 const SimpleTriggerActions: Partial<Record<NJobDeskTriggerAction, SimpleAction>> = {
-  pause: [(path) => TriggersService.pauseTrigger({ path }), "njobdesk_toastPaused"],
-  resume: [(path) => TriggersService.resumeTrigger({ path }), "njobdesk_toastResumed"],
-  "reset-error": [(path) => TriggersService.resetTriggerError({ path }), "njobdesk_toastResetError"],
+  pause: [(id) => TriggersService.pauseTrigger({ path: { id } }), "njobdesk_toastPaused"],
+  resume: [(id) => TriggersService.resumeTrigger({ path: { id } }), "njobdesk_toastResumed"],
+  "reset-error": [(id) => TriggersService.resetTriggerError({ path: { id } }), "njobdesk_toastResetError"],
 };
 
 export interface NJobDeskJobsFilterIntent {
@@ -92,6 +88,8 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
   @state()
   private _loading = true;
 
+  #providers = new ProvidersController(this);
+
   connectedCallback() {
     super.connectedCallback();
     this.#loadJobs();
@@ -121,7 +119,7 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
   }
 
   async #openJob(jobId: string) {
-    const response = await JobsService.getJob({ path: splitId(jobId) });
+    const response = await JobsService.getJob({ path: { id: jobId } });
     if (response.data) {
       this._selectedJob = response.data;
     }
@@ -130,28 +128,35 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
   async #refresh() {
     await this.#loadJobs();
     if (this._selectedJob) {
-      await this.#openJob(`${this._selectedJob.job.group}/${this._selectedJob.job.name}`);
+      await this.#openJob(this._selectedJob.job.id);
     }
   }
 
-  async #runSimpleAction([call, toastKey]: SimpleAction, path: NJobDeskKeyPath) {
-    this.#reportResult(!(await call(path)).error, toastKey);
+  async #runSimpleAction([call, toastKey]: SimpleAction, id: string) {
+    this.#reportResult(!(await call(id)).error, toastKey);
+  }
+
+  #jobDisplayName(jobId: string): string {
+    if (this._selectedJob?.job.id === jobId) {
+      return this._selectedJob.job.name;
+    }
+
+    return this._jobs.find((job) => job.id === jobId)?.name ?? jobId;
   }
 
   async #handleJobAction(action: NJobDeskJobAction, jobId: string) {
-    const path = splitId(jobId);
     try {
       const simple = SimpleJobActions[action];
       if (simple) {
-        await this.#runSimpleAction(simple, path);
+        await this.#runSimpleAction(simple, jobId);
       } else if (action === "delete") {
         await confirm({
           headline: this.localize.term("njobdesk_confirmDeleteHeadline"),
-          content: this.localize.term("njobdesk_confirmDeleteMessage", jobId),
+          content: this.localize.term("njobdesk_confirmDeleteMessage", this.#jobDisplayName(jobId)),
           color: "danger",
           confirmLabel: this.localize.term("njobdesk_actionDelete"),
         });
-        const response = await JobsService.deleteJob({ path });
+        const response = await JobsService.deleteJob({ path: { id: jobId } });
         this.#reportResult(!response.error, "njobdesk_toastDeleted");
         this._selectedJob = undefined;
       }
@@ -163,24 +168,24 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
   }
 
   async #handleTriggerAction(action: NJobDeskTriggerAction, triggerId: string) {
-    const path = splitId(triggerId);
     try {
       const simple = SimpleTriggerActions[action];
       if (simple) {
-        await this.#runSimpleAction(simple, path);
+        await this.#runSimpleAction(simple, triggerId);
         await this.#refresh();
         return;
       }
 
       switch (action) {
         case "unschedule": {
+          const trigger = this.#findTrigger(triggerId);
           await confirm({
             headline: this.localize.term("njobdesk_confirmUnscheduleHeadline"),
-            content: this.localize.term("njobdesk_confirmUnscheduleMessage", triggerId),
+            content: this.localize.term("njobdesk_confirmUnscheduleMessage", trigger?.name ?? triggerId),
             color: "danger",
             confirmLabel: this.localize.term("njobdesk_actionUnschedule"),
           });
-          const response = await TriggersService.unscheduleTrigger({ path });
+          const response = await TriggersService.unscheduleTrigger({ path: { id: triggerId } });
           this.#reportResult(!response.error, "njobdesk_toastUnscheduled");
           break;
         }
@@ -193,7 +198,7 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
           await openModal<NJobDeskEditScheduleModalData, never>(
             "njd-edit-schedule-modal",
             {
-              group: trigger.group,
+              triggerId,
               name: trigger.name,
               cronExpression: trigger.cronExpression,
               timeZoneId: trigger.timeZoneId,
@@ -216,7 +221,7 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
   }
 
   #findTrigger(triggerId: string): TriggerModel | undefined {
-    return this._selectedJob?.triggers.find((candidate) => `${candidate.group}/${candidate.name}` === triggerId);
+    return this._selectedJob?.triggers.find((candidate) => candidate.id === triggerId);
   }
 
   async #previewNextFires(triggerId: string) {
@@ -264,7 +269,11 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
         return false;
       }
 
-      return !filter || job.name.toLowerCase().includes(filter) || job.group.toLowerCase().includes(filter);
+      return (
+        !filter ||
+        job.name.toLowerCase().includes(filter) ||
+        (job.group?.toLowerCase().includes(filter) ?? false)
+      );
     });
   }
 
@@ -305,10 +314,14 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
   }
 
   #renderJobsTable(jobs: JobSummaryModel[]) {
+    const multiProvider = this.#providers.multiProvider;
     return html`
       <uui-table data-mark="njobdesk:table:jobs">
         <uui-table-head>
           <uui-table-head-cell>${this.localize.term("njobdesk_colJob")}</uui-table-head-cell>
+          ${multiProvider
+            ? html`<uui-table-head-cell>${this.localize.term("njobdesk_colProvider")}</uui-table-head-cell>`
+            : nothing}
           <uui-table-head-cell>${this.localize.term("njobdesk_colState")}</uui-table-head-cell>
           <uui-table-head-cell>${this.localize.term("njobdesk_colSchedule")}</uui-table-head-cell>
           <uui-table-head-cell class="right">${this.localize.term("njobdesk_colNextFire")}</uui-table-head-cell>
@@ -316,13 +329,17 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
           <uui-table-head-cell class="center">${this.localize.term("njobdesk_colTriggers")}</uui-table-head-cell>
           <uui-table-head-cell class="right"></uui-table-head-cell>
         </uui-table-head>
-        ${jobs.map((job) => {
-          const jobId = `${job.group}/${job.name}`;
-          return html`
+        ${jobs.map(
+          (job) => html`
             <uui-table-row>
               <uui-table-cell>
-                <njd-job-link-cell .jobId=${jobId} .name=${job.name}></njd-job-link-cell>
+                <njd-job-link-cell .jobId=${job.id} .name=${job.name}></njd-job-link-cell>
               </uui-table-cell>
+              ${multiProvider
+                ? html`<uui-table-cell>
+                    <njd-provider-tag .providerKey=${job.providerKey}></njd-provider-tag>
+                  </uui-table-cell>`
+                : nothing}
               <uui-table-cell>
                 <njd-state-tag .value=${job.state}></njd-state-tag>
               </uui-table-cell>
@@ -342,11 +359,14 @@ export class NJobDeskJobsViewElement extends NJobDeskElement {
               </uui-table-cell>
               <uui-table-cell class="center">${job.triggerCount}</uui-table-cell>
               <uui-table-cell class="right">
-                <njd-job-actions-cell .jobId=${jobId} .state=${job.state}></njd-job-actions-cell>
+                <njd-job-actions-cell
+                  .jobId=${job.id}
+                  .state=${job.state}
+                  .capabilities=${job.capabilities}></njd-job-actions-cell>
               </uui-table-cell>
             </uui-table-row>
-          `;
-        })}
+          `,
+        )}
       </uui-table>
     `;
   }
