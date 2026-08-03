@@ -223,12 +223,12 @@ Design decisions of record:
 - CronExpressionDescriptor emits 24h-clock summaries here ("At 03:00") — locale-dependent in assertions.
 
 ## Phase 7: uQuartz refactor (in D:\Projects\Umbraco.Community.Quartz)
-Status: Not started
+Status: Complete
 Out of scope for this phase: uQuartz's own public release.
 
-- [ ] Delete moved code; reference NJobDesk packages from the local folder feed; rename kept services `Quartz*`; split generic mapper parts already moved
-- [ ] `Umbraco.Community.Quartz` thins to Quartz wiring + consumes `NJobDesk.Umbraco` (its own client build targets removed — bundle ships via NJobDesk.Umbraco)
-- [ ] Keep `.editorconfig` + `.claude\rules\` there (already present); reconcile README (Quartz.HttpApi roadmap item superseded)
+- [x] Delete moved code; reference NJobDesk packages from the local folder feed; rename kept services `Quartz*`; split generic mapper parts already moved
+- [x] `Umbraco.Community.Quartz` thins to Quartz wiring + consumes `NJobDesk.Umbraco` (its own client build targets removed — bundle ships via NJobDesk.Umbraco)
+- [x] Keep `.editorconfig` + `.claude\rules\` there (already present); reconcile README (Quartz.HttpApi roadmap item superseded)
 
 ### Acceptance criteria
 1. Both uQuartz demo sites fully functional through the extracted packages: all 20 endpoints + UI features (schedule editing, history, logs, pause/resume, trigger).
@@ -238,7 +238,14 @@ Out of scope for this phase: uQuartz's own public release.
 - uQuartz `dotnet build`/`test` + demo walkthroughs; `dotnet format --verify-no-changes` in that repo too.
 
 ### Phase Summary
-_(write when phase completes)_
+Completed 2026-08-03 on uQuartz branch **`feature/njobdesk`** (commit `fa83d98`; mainline untouched). Verified: uQuartz **73 unit + 48 integration tests green** (incl. the Testcontainers SQL Server suites — Docker was available), format clean in BOTH repos. **Live walkthroughs**: PlainAspNetCore demo (`--urls http://localhost:5095`; its default port hit a Windows excluded-port range) — Quartz provider Started/RAMJobStore, jobs with interval summaries, executions flowing into NJobDesk history with composite ids, per-run logs captured through the new scope seams (job ILogger lines + recorded exception), dashboard UI at `/quartz`; Umbraco demo (floats 17.* → 17.5.3, `UpgradeUnattended` handled the DB upgrade; admin@example.com/SuperSecret123!) — Settings→Jobs shows the uQuartz scheduler card, live running execution, and **schedule editing round-trips** ("0 30 3 * * ?" → "At 03:30" persisted through composite trigger id → Quartz), API 401 unauthenticated.
+
+Structure after the refactor (uQuartz consumes NJobDesk 0.1.0 from the local feed `..\njobdesk\artifacts` via nuget.config + CPM entries; **same-version repack requires purging `D:\Software\.nuget\njobdesk.*` before restore**):
+- **uQuartz.AspNetCore: DELETED** (project + Client). `uQuartz.Core` = the Quartz provider package (refs NJobDesk.Core): `QuartzSchedulerProvider` (key `quartz`, full caps minus Interrupt; when no `ISchedulerFactory` is registered its Info throws a descriptive InvalidOperationException → degraded card, Management = Unsupported), `QuartzScheduler{Info,Management}Service` (id-based via **`QuartzJobKeys`**: local id = `Escape(group):Escape(name)` — percent-encoding makes the separator unambiguous for arbitrary group/name), `QuartzCronService : ICronService` (registered via TryAdd BEFORE `AddNJobDesk` in `AdduQuartz` so Quartz-exact semantics win over Cronos), slim `HistoryOptions { Enabled, Logs.Enabled }` (retention/cleanup/log-limits bind from the SAME `uQuartz:History` section into `NJobDeskHistoryOptions` — `AdduQuartz` passes its section name to `AddNJobDesk`; `UseClustering` post-configures `NJobDeskHistoryOptions.Clustered`).
+- **uQuartz.History** = Quartz capture wiring over NJobDesk.History.EFCore (context/migrations/store/cleanup/reconciliation/MEL-provider all deleted): `ExecutionHistoryListener` writes through `IExecutionHistoryWriter` (Vetoed = pre-completed entry via StartAsync) and saves logs via `IExecutionLogStore` from the scope the reworked `LogCapturingJob`/`Factory` stashes in the job context; `ExecutionLogCaptureSink` (Serilog) feeds `AmbientExecutionLog` (new public seam added to NJobDesk for exactly this) with a testable static `Map`. **`AddQuartzHistory` must reposition NJobDesk's migration + reconciliation hosted services BEFORE Quartz's hosted service** (registration order ≠ start order guarantee; the donor's `SchemaProvisioningOrderTests` caught this regression — matched by ImplementationType name since the NJobDesk types are internal).
+- **Umbraco.Community.Quartz** thinned: `QuartzApiComposer` + wwwroot bundle + client MSBuild targets deleted (NJobDesk.Umbraco's composer + App_Plugins bundle arrive transitively); keeps `QuartzComposer` (AdduQuartz with the `UmbracoCommunityQuartz` section), `AddQuartzScheduler`, `UmbracoQuartzDatabase`, the not-configured warning handler. Umbraco range bumped to `[17.5.0,18.0.0)` (NJobDesk.Umbraco's floor). Dashboard tab label is now "Jobs" (NJobDesk's manifest), not "Quartz".
+- **Demos**: plain demo uses `AddNJobDeskApi()` + `AdduQuartz().AddHistory(db)` + `MapNJobDesk("/quartz")` (UI path is host-chosen; the API path stays `njobdesk/api/v1` everywhere — one generated client works across hosts). Umbraco demo Program unchanged.
+- **Tests**: deleted the suites duplicating njobdesk coverage (buffer/log-store/cleanup/reconciliation/store stats); adapted the rest to composite ids + `DashboardStatusModel` + provider resolution (`GetRequiredService<ISchedulerProvider>().Info/.Management`); fixture maps `/quartz` for UI, API assertions on `/njobdesk/api/v1`; SqlServer schema assertions split across `quartz` (QRTZ_) and `njobdesk` (history) schemas; the old `DELETE jobs/any/job` (two segments) is now a single composite segment (two-segment paths 405). New `NJobDeskCaptureFactory` builds a real capture scope through DI (scope ctor is internal to NJobDesk); it must register an `IConfiguration` — that surfaced a real NJobDesk bug, fixed in njobdesk `b4f2a91`: **`AddEfHistory` now binds options tolerantly via `GetService<IConfiguration>()` instead of `BindConfiguration`** (bare service collections no longer throw on options resolution).
 
 ## Phase 8: OSS release
 Status: Not started
