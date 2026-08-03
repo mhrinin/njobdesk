@@ -1,11 +1,15 @@
 <Solution>
   <Folder Name="/demo/">
+    <Project Path="demo/Demo.Fakes/Demo.Fakes.csproj" />
+    <Project Path="demo/Demo.Umbraco.V16/Demo.Umbraco.V16.csproj" />
+    <Project Path="demo/Demo.Umbraco.V17/Demo.Umbraco.V17.csproj" />
     <Project Path="demo/Standalone.DemoSite/Standalone.DemoSite.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/NJobDesk.AspNetCore/NJobDesk.AspNetCore.csproj" />
     <Project Path="src/NJobDesk.Core/NJobDesk.Core.csproj" />
     <Project Path="src/NJobDesk.History.EFCore/NJobDesk.History.EFCore.csproj" />
+    <Project Path="src/NJobDesk.Umbraco/NJobDesk.Umbraco.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NJobDesk.Tests/NJobDesk.Tests.csproj" />

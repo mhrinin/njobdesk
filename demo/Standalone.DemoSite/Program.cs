@@ -36,6 +36,14 @@ builder.Services.AddSwaggerGen(swagger =>
     swagger.DocInclusionPredicate((_, _) => true);
     swagger.SupportNonNullableReferenceTypes();
     swagger.SchemaFilter<RequireNonNullableSchemaFilter>();
+    // Declared on every operation so the generated client attaches the host's bearer token when one
+    // is configured (the Umbraco backoffice); hosts without an auth callback simply omit the header.
+    swagger.AddSecurityDefinition("bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+    });
+    swagger.OperationFilter<BearerSecurityOperationFilter>();
     swagger.CustomOperationIds(api =>
         api.ActionDescriptor is Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor descriptor
             ? char.ToLowerInvariant(descriptor.ActionName[0]) + descriptor.ActionName[1..]

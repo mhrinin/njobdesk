@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc && vite build -c vite.standalone.config.ts",
+    "build": "tsc && vite build -c vite.umbraco.config.ts && vite build -c vite.standalone.config.ts",
     "build:standalone": "tsc && vite build -c vite.standalone.config.ts",
+    "build:umbraco": "tsc && vite build -c vite.umbraco.config.ts",
     "dev": "vite -c vite.standalone.config.ts",
     "test": "web-test-runner",
     "generate-client": "node scripts/generate-openapi.js"
@@ -14,6 +15,7 @@
     "@esm-bundle/chai": "^4.3.4-fix.0",
     "@hey-api/openapi-ts": "^0.85.2",
     "@types/mocha": "^10.0.10",
+    "@umbraco-cms/backoffice": "^17.0.0",
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
     "typescript": "^5.9.3",

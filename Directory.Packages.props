@@ -22,7 +22,18 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.29" />
   </ItemGroup>
 
-  <ItemGroup Label="Microsoft.Extensions (net10)" Condition="'$(TargetFramework)' != 'net8.0'">
+  <ItemGroup Label="Umbraco 16 (net9)" Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageVersion Include="Umbraco.Cms" Version="[16.0.0,17.0.0)" />
+    <PackageVersion Include="Umbraco.Cms.Api.Common" Version="[16.0.0,17.0.0)" />
+    <PackageVersion Include="Umbraco.Cms.Api.Management" Version="[16.0.0,17.0.0)" />
+    <PackageVersion Include="Umbraco.Cms.Web.Common" Version="[16.0.0,17.0.0)" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft.Extensions (net10)" Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageVersion Include="Umbraco.Cms" Version="[17.0.0,18.0.0)" />
+    <PackageVersion Include="Umbraco.Cms.Api.Common" Version="[17.0.0,18.0.0)" />
+    <PackageVersion Include="Umbraco.Cms.Api.Management" Version="[17.0.0,18.0.0)" />
+    <PackageVersion Include="Umbraco.Cms.Web.Common" Version="[17.0.0,18.0.0)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />

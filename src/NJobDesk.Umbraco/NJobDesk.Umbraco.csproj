@@ -1,0 +1,75 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <RootNamespace>NJobDesk.Umbraco</RootNamespace>
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>NJobDesk.Umbraco</PackageId>
+    <Product>NJobDesk.Umbraco</Product>
+    <Title>NJobDesk jobs dashboard for Umbraco</Title>
+    <Description>Umbraco backoffice integration for NJobDesk, the scheduler-agnostic jobs dashboard for .NET: a Settings-section dashboard guarded by backoffice authentication, wired to any NJobDesk scheduler provider (Umbraco recurring jobs, Quartz via uQuartz, Hangfire). Supports Umbraco 16 and 17.</Description>
+    <PackageTags>umbraco plugin package umbraco-marketplace jobs scheduler dashboard background-jobs</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Cms.Api.Common" />
+    <PackageReference Include="Umbraco.Cms.Api.Management" />
+    <PackageReference Include="Umbraco.Cms.Web.Common" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NJobDesk.AspNetCore\NJobDesk.AspNetCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NJobDesk.Tests" />
+    <InternalsVisibleTo Include="NJobDesk.IntegrationTests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <BuildClient Condition="'$(BuildClient)' == ''">true</BuildClient>
+    <ClientDir>$(MSBuildProjectDirectory)\..\NJobDesk.AspNetCore\Client</ClientDir>
+    <UmbracoAppPluginsDir>$(MSBuildProjectDirectory)\wwwroot\App_Plugins\NJobDesk</UmbracoAppPluginsDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <UmbracoClientInputs Include="$(ClientDir)\src\**\*.*;$(ClientDir)\public\**\*.*;$(ClientDir)\package.json;$(ClientDir)\tsconfig.json;$(ClientDir)\vite.umbraco.config.ts" />
+  </ItemGroup>
+
+  <!-- Builds the backoffice extension bundle into this project's wwwroot. The Client sources live in
+       NJobDesk.AspNetCore, which builds first (ProjectReference) and owns npm ci. -->
+  <Target Name="BuildUmbracoClientAssets" Condition="'$(BuildClient)' == 'true'" BeforeTargets="ResolveProjectStaticWebAssets;AssignTargetPaths;Pack" Inputs="@(UmbracoClientInputs)" Outputs="$(UmbracoAppPluginsDir)\umbraco-package.json">
+    <Message Importance="high" Text="Building Umbraco client assets (npm run build:umbraco)..." />
+    <Exec Command="npm run build:umbraco" WorkingDirectory="$(ClientDir)" />
+  </Target>
+
+  <!-- wwwroot output is gitignored and hash-named, so evaluation-time Content globs miss freshly
+       built files; re-glob before the Razor SDK collects static web assets. -->
+  <Target Name="RefreshUmbracoClientContent" AfterTargets="BuildUmbracoClientAssets" BeforeTargets="ResolveProjectStaticWebAssets">
+    <ItemGroup>
+      <Content Remove="wwwroot\App_Plugins\NJobDesk\**" />
+      <Content Include="wwwroot\App_Plugins\NJobDesk\**" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Keep the backoffice manifest version in sync with the package version so Umbraco busts its extension caches per release -->
+  <Target Name="StampUmbracoPackageVersion" AfterTargets="BuildUmbracoClientAssets" BeforeTargets="ResolveProjectStaticWebAssets" Condition="'$(BuildClient)' == 'true' And Exists('$(UmbracoAppPluginsDir)\umbraco-package.json')">
+    <PropertyGroup>
+      <UmbracoPackageJsonPath>$(UmbracoAppPluginsDir)\umbraco-package.json</UmbracoPackageJsonPath>
+      <UmbracoPackageJsonContent>$([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText($(UmbracoPackageJsonPath))), '"version":\s*"[^"]*"', '"version": "$(Version)"'))</UmbracoPackageJsonContent>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(UmbracoPackageJsonPath)" Lines="$(UmbracoPackageJsonContent)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+  </Target>
+</Project>

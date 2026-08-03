@@ -1,0 +1,14 @@
+{
+  "id": "NJobDesk.Umbraco",
+  "name": "NJobDesk",
+  "version": "0.1.0",
+  "allowTelemetry": true,
+  "extensions": [
+    {
+      "name": "NJobDesk Bundle",
+      "alias": "NJobDesk.Bundle",
+      "type": "bundle",
+      "js": "/App_Plugins/NJobDesk/njobdesk.js"
+    }
+  ]
+}

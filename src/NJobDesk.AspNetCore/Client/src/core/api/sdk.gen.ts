@@ -21,6 +21,12 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 export class CronService {
     public static validateCron<ThrowOnError extends boolean = false>(options?: Options<ValidateCronData, ThrowOnError>) {
         return (options?.client ?? client).post<ValidateCronResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/cron/validate',
             ...options,
             headers: {
@@ -34,6 +40,12 @@ export class CronService {
 export class ExecutionsService {
     public static getExecutions<ThrowOnError extends boolean = false>(options?: Options<GetExecutionsData, ThrowOnError>) {
         return (options?.client ?? client).get<GetExecutionsResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/executions',
             ...options
         });
@@ -41,6 +53,12 @@ export class ExecutionsService {
     
     public static getExecutionLogs<ThrowOnError extends boolean = false>(options: Options<GetExecutionLogsData, ThrowOnError>) {
         return (options.client ?? client).get<GetExecutionLogsResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/executions/{id}/logs',
             ...options
         });
@@ -48,6 +66,12 @@ export class ExecutionsService {
     
     public static getRunningExecutions<ThrowOnError extends boolean = false>(options?: Options<GetRunningExecutionsData, ThrowOnError>) {
         return (options?.client ?? client).get<GetRunningExecutionsResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/executions/running',
             ...options
         });
@@ -57,6 +81,12 @@ export class ExecutionsService {
 export class JobsService {
     public static getJobs<ThrowOnError extends boolean = false>(options?: Options<GetJobsData, ThrowOnError>) {
         return (options?.client ?? client).get<GetJobsResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/jobs',
             ...options
         });
@@ -64,6 +94,12 @@ export class JobsService {
     
     public static deleteJob<ThrowOnError extends boolean = false>(options: Options<DeleteJobData, ThrowOnError>) {
         return (options.client ?? client).delete<DeleteJobResponses, DeleteJobErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/jobs/{id}',
             ...options
         });
@@ -71,6 +107,12 @@ export class JobsService {
     
     public static getJob<ThrowOnError extends boolean = false>(options: Options<GetJobData, ThrowOnError>) {
         return (options.client ?? client).get<GetJobResponses, GetJobErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/jobs/{id}',
             ...options
         });
@@ -78,6 +120,12 @@ export class JobsService {
     
     public static triggerJob<ThrowOnError extends boolean = false>(options: Options<TriggerJobData, ThrowOnError>) {
         return (options.client ?? client).post<TriggerJobResponses, TriggerJobErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/jobs/{id}/trigger',
             ...options
         });
@@ -85,6 +133,12 @@ export class JobsService {
     
     public static pauseJob<ThrowOnError extends boolean = false>(options: Options<PauseJobData, ThrowOnError>) {
         return (options.client ?? client).post<PauseJobResponses, PauseJobErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/jobs/{id}/pause',
             ...options
         });
@@ -92,6 +146,12 @@ export class JobsService {
     
     public static resumeJob<ThrowOnError extends boolean = false>(options: Options<ResumeJobData, ThrowOnError>) {
         return (options.client ?? client).post<ResumeJobResponses, ResumeJobErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/jobs/{id}/resume',
             ...options
         });
@@ -101,6 +161,12 @@ export class JobsService {
 export class SchedulerService {
     public static getSchedulerStatus<ThrowOnError extends boolean = false>(options?: Options<GetSchedulerStatusData, ThrowOnError>) {
         return (options?.client ?? client).get<GetSchedulerStatusResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/scheduler',
             ...options
         });
@@ -108,6 +174,12 @@ export class SchedulerService {
     
     public static getSchedulerStatistics<ThrowOnError extends boolean = false>(options?: Options<GetSchedulerStatisticsData, ThrowOnError>) {
         return (options?.client ?? client).get<GetSchedulerStatisticsResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/scheduler/statistics',
             ...options
         });
@@ -115,6 +187,12 @@ export class SchedulerService {
     
     public static pauseAll<ThrowOnError extends boolean = false>(options?: Options<PauseAllData, ThrowOnError>) {
         return (options?.client ?? client).post<PauseAllResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/scheduler/pause-all',
             ...options
         });
@@ -122,6 +200,12 @@ export class SchedulerService {
     
     public static resumeAll<ThrowOnError extends boolean = false>(options?: Options<ResumeAllData, ThrowOnError>) {
         return (options?.client ?? client).post<ResumeAllResponses, unknown, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/scheduler/resume-all',
             ...options
         });
@@ -131,6 +215,12 @@ export class SchedulerService {
 export class TriggersService {
     public static pauseTrigger<ThrowOnError extends boolean = false>(options: Options<PauseTriggerData, ThrowOnError>) {
         return (options.client ?? client).post<PauseTriggerResponses, PauseTriggerErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/triggers/{id}/pause',
             ...options
         });
@@ -138,6 +228,12 @@ export class TriggersService {
     
     public static resumeTrigger<ThrowOnError extends boolean = false>(options: Options<ResumeTriggerData, ThrowOnError>) {
         return (options.client ?? client).post<ResumeTriggerResponses, ResumeTriggerErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/triggers/{id}/resume',
             ...options
         });
@@ -145,6 +241,12 @@ export class TriggersService {
     
     public static resetTriggerError<ThrowOnError extends boolean = false>(options: Options<ResetTriggerErrorData, ThrowOnError>) {
         return (options.client ?? client).post<ResetTriggerErrorResponses, ResetTriggerErrorErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/triggers/{id}/reset-error',
             ...options
         });
@@ -152,6 +254,12 @@ export class TriggersService {
     
     public static unscheduleTrigger<ThrowOnError extends boolean = false>(options: Options<UnscheduleTriggerData, ThrowOnError>) {
         return (options.client ?? client).delete<UnscheduleTriggerResponses, UnscheduleTriggerErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/triggers/{id}',
             ...options
         });
@@ -159,6 +267,12 @@ export class TriggersService {
     
     public static rescheduleTrigger<ThrowOnError extends boolean = false>(options: Options<RescheduleTriggerData, ThrowOnError>) {
         return (options.client ?? client).put<RescheduleTriggerResponses, RescheduleTriggerErrors, ThrowOnError>({
+            security: [
+                {
+                    scheme: 'bearer',
+                    type: 'http'
+                }
+            ],
             url: '/triggers/{id}/schedule',
             ...options,
             headers: {

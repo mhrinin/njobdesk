@@ -44,3 +44,13 @@ Thumbs.db
 *.db
 *.db-shm
 *.db-wal
+
+# Umbraco demo runtime artifacts
+demo/**/umbraco/Data/
+demo/**/umbraco/Logs/
+demo/**/umbraco/models/
+demo/**/umbraco/mediafs/
+demo/**/wwwroot/media/
+demo/**/wwwroot/umbraco/
+# Built backoffice bundle
+src/NJobDesk.Umbraco/wwwroot/App_Plugins/
