@@ -200,12 +200,12 @@ Empirical findings that shaped the phase (the version matrix matters):
 What was built (`src\NJobDesk.Umbraco\Providers\`): `UmbracoRecurringJobsProvider` (key `umbraco`, version from `IUmbracoVersion`, caps TriggerNow+History; per-job `TriggerNow` reflects `ITriggerableRecurringBackgroundJob` on 17), `UmbracoJobsInfoService` (interval → "Every N minutes" synthetic Simple trigger; prev/next fire derived from the last history row + Period; store-backed statistics/running filtered to this provider's key), `UmbracoJobsManagementService` (17: constructed-generic `IRecurringBackgroundJobTrigger<>` resolved from DI + `TriggerExecution()` via reflection; 16: `UmbracoJobFallbackRunner` — single-flight per job, writes Start/Complete through `IExecutionHistoryWriter`; everything else delegates to `UnsupportedSchedulerManagementService`), `UmbracoJobHistoryNotificationHandler` (net10-only, all five notifications), and `AddNJobDeskUmbracoJobs(this IUmbracoBuilder)` wiring it per TFM. Demos register the provider + `AddEfHistory` (SQLite under `umbraco\Data`, **absolute path** — relative SQLite paths resolve against the process CWD, not content root, and fail under `dotnet run`) + a 2-minute `DemoNewsletterDispatchJob` (17: `RecurringBackgroundJobBase` + triggerable; 16: raw interface with an empty `PeriodChanged` accessor pair). No provider unit tests: the test project's TFMs (net8/net10) can't reference the net9 Umb16 surface and the trigger/notification paths need a composed Umbraco host — the live walkthrough on both demos is the verification, per the plan's acceptance.
 
 ## Phase 6: NJobDesk.Hangfire provider
-Status: Not started
+Status: Complete
 Out of scope for this phase: Hangfire schedule editing, pause, deep history correlation (evaluate; bounded or off).
 
-- [ ] Provider over `JobStorage` connection/monitoring APIs; trigger via `IRecurringJobManager`
-- [ ] Plain ASP.NET Core demo with Hangfire (memory or SQLite storage) + sample recurring job
-- [ ] History depth decision documented (LastExecution-only vs bounded monitoring-API correlation)
+- [x] Provider over `JobStorage` connection/monitoring APIs; trigger via `IRecurringJobManager`
+- [x] Plain ASP.NET Core demo with Hangfire (memory or SQLite storage) + sample recurring job
+- [x] History depth decision documented (LastExecution-only vs bounded monitoring-API correlation)
 
 ### Acceptance criteria
 1. Hangfire jobs listed with cron + next/last run; trigger works; dashboard fully usable with zero Umbraco packages installed.
@@ -214,7 +214,13 @@ Out of scope for this phase: Hangfire schedule editing, pause, deep history corr
 - Live demo walkthrough; unit tests with substituted storage; `dotnet format --verify-no-changes`.
 
 ### Phase Summary
-_(write when phase completes)_
+Completed 2026-08-03. Verified live on `demo\Hangfire.DemoSite` (plain ASP.NET Core net10 + Hangfire.AspNetCore + Hangfire.InMemory, **zero Umbraco packages**): three seeded recurring jobs render with human cron summaries ("Every minute"/"Every 2 minutes"/"Every 5 minutes"), real next/last fire times from Hangfire, capability-gated actions (Run now + delete only — no pause/edit); `POST /jobs/hangfire%3Anewsletter-digest/trigger` enqueued and ran the job (console output observed, detail shows the last execution Succeeded); provider card Started / InMemoryStorage / 20 workers. 5 new unit tests run the provider against a REAL `InMemoryStorage` + `RecurringJobManager` (no substitution needed — listing/summary/next-fire, detail trigger + last execution, trigger enqueue + unknown-id refusal, delete round-trip, statistics). 62 (net8) / 64 (net10) tests green, format clean, `NJobDesk.Hangfire.0.1.0.nupkg` packs.
+
+Design decisions of record:
+- **History depth: LastExecution-only.** Each recurring job surfaces its `LastExecution`/`LastJobState` as prev-fire and a single synthesized recent execution on the detail (Succeeded/Failed/Running mapped from the state string); runs are NOT archived into NJobDesk history and `GetRunningAsync` returns [] (correlating Hangfire's processing/succeeded monitoring pages back to recurring-job ids requires per-job parameter fetches — unbounded; revisit post-v1 if wanted). Caps: `TriggerNow + Delete + Triggers` (delete maps to `RemoveIfExists`, gating both job delete and trigger unschedule); `History`/`RunLogs` false so the client hides history affordances for these runs.
+- Reads go through `JobStorage.GetConnection().GetRecurringJobs()` and `GetMonitoringApi()` (status: Started when servers exist, workers summed into ThreadPoolSize, StoreType = storage type name; statistics: `Recurring` count + `Processing` as running count, no 24h buckets — Hangfire counters are lifetime). **Gotcha: `GetRecurringJobs(ids)` returns a placeholder DTO with `Removed = true` for unknown ids** — existence checks must filter `!dto.Removed` or every id "exists".
+- No DI extension needed: `AddProvider<HangfireSchedulerProvider>()` after `AddHangfire`/`AddHangfireServer` resolves `JobStorage` + `IRecurringJobManager` from Hangfire's own registrations. CPM pins Hangfire 1.8.24 / Hangfire.InMemory 1.0.0 (shared group; provider references only Hangfire.Core).
+- CronExpressionDescriptor emits 24h-clock summaries here ("At 03:00") — locale-dependent in assertions.
 
 ## Phase 7: uQuartz refactor (in D:\Projects\Umbraco.Community.Quartz)
 Status: Not started

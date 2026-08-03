@@ -3,11 +3,13 @@
     <Project Path="demo/Demo.Fakes/Demo.Fakes.csproj" />
     <Project Path="demo/Demo.Umbraco.V16/Demo.Umbraco.V16.csproj" />
     <Project Path="demo/Demo.Umbraco.V17/Demo.Umbraco.V17.csproj" />
+    <Project Path="demo/Hangfire.DemoSite/Hangfire.DemoSite.csproj" />
     <Project Path="demo/Standalone.DemoSite/Standalone.DemoSite.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/NJobDesk.AspNetCore/NJobDesk.AspNetCore.csproj" />
     <Project Path="src/NJobDesk.Core/NJobDesk.Core.csproj" />
+    <Project Path="src/NJobDesk.Hangfire/NJobDesk.Hangfire.csproj" />
     <Project Path="src/NJobDesk.History.EFCore/NJobDesk.History.EFCore.csproj" />
     <Project Path="src/NJobDesk.Umbraco/NJobDesk.Umbraco.csproj" />
   </Folder>
