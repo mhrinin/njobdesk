@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NJobDesk.Core.DependencyInjection;
 using NJobDesk.Core.Store;
 using NJobDesk.History.EFCore.Capture;
@@ -38,8 +40,11 @@ public static class NJobDeskEfHistoryExtensions
         }
 
         var services = builder.Services;
-        services.AddOptions<NJobDeskHistoryOptions>()
-            .BindConfiguration($"{builder.SectionName}:History");
+        services.AddOptions<NJobDeskHistoryOptions>();
+        // Bind tolerantly: hosts without IConfiguration (bare service collections) keep the defaults.
+        services.AddSingleton<IConfigureOptions<NJobDeskHistoryOptions>>(provider =>
+            new ConfigureNamedOptions<NJobDeskHistoryOptions>(Options.DefaultName, options =>
+                provider.GetService<IConfiguration>()?.GetSection($"{builder.SectionName}:History").Bind(options)));
         if (configure is not null)
         {
             services.Configure(configure);
