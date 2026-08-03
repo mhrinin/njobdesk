@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NJobDesk.Umbraco\NJobDesk.Umbraco.csproj" />
+    <ProjectReference Include="..\..\src\NJobDesk.History.EFCore\NJobDesk.History.EFCore.csproj" />
     <ProjectReference Include="..\Demo.Fakes\Demo.Fakes.csproj" />
   </ItemGroup>
 </Project>
+

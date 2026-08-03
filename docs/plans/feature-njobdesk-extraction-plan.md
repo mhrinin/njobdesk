@@ -171,22 +171,33 @@ What was built:
 - Serilog note for Phase 5: Umbraco replaces `ILoggerFactory` with Serilog, so the MEL `ILoggerProvider` capture from Phase 3 will NOT see job logs in Umbraco hosts — the donor's Serilog sink (`ExecutionLogCaptureSink`, still in uQuartz) needs a NJobDesk equivalent when Phase 5 wires history capture.
 
 ## Phase 5: Umbraco native jobs provider
-Status: Not started
+Status: Complete
 Out of scope for this phase: cron-override registration helper (v1.x candidate).
 
-- [ ] Discovery via `IEnumerable<IRecurringBackgroundJob>`; job info from Period/Delay (read-only synthetic trigger, no `ScheduleEditing`)
-- [ ] History via recurring-job notifications → `IExecutionHistoryStore` (verify notification types/payloads empirically)
-- [ ] Manual trigger: check v17 native trigger API first; fallback scope+`RunJobAsync` with CTS + single-flight; stop = cancel own runs only
-- [ ] Sample recurring jobs in the Umbraco demos
+- [x] Discovery via `IEnumerable<IRecurringBackgroundJob>`; job info from Period/Delay (read-only synthetic trigger, no `ScheduleEditing`)
+- [x] History via recurring-job notifications → `IExecutionHistoryStore` (verify notification types/payloads empirically)
+- [x] Manual trigger: check v17 native trigger API first; fallback scope+`RunJobAsync` with CTS + single-flight; stop = cancel own runs only *(REVISED — see summary: "stop" is empirically impossible on 16 and unnecessary on 17)*
+- [x] Sample recurring jobs in the Umbraco demos
 
 ### Acceptance criteria
 1. Sample jobs listed with persisted history on both demos; trigger + stop work; capabilities hide cron editing.
+   *(Revised during the phase: "stop" dropped — Umbraco 16's `RunJobAsync()` takes no CancellationToken so a fallback run cannot be canceled cooperatively, and on 17.5+ triggered runs execute inside Umbraco's own hosted loop which owns their lifetime. `Interrupt` capability stays false; no interrupt API surface was added.)*
 
 ### Verification Plan
 - Live on both Umbraco demos per acceptance; unit tests for single-flight/stop semantics; `dotnet format --verify-no-changes`.
 
 ### Phase Summary
-_(write when phase completes)_
+Completed 2026-08-03. **Live-verified on both demos**: the Jobs tab lists `DemoNewsletterDispatchJob` (Umbraco's ~7 built-in jobs correctly hidden behind the system-jobs toggle — anything whose type FullName starts `Umbraco.` is flagged system); Run now on Umb **17.5** goes through the native trigger → the job's own log lines appear → notifications persist the run ("Succeeded 3.0s" in the run timeline); Run now on Umb **16.5** goes through the fallback runner ("Succeeded 3.5s" persisted by the runner itself); scheduled Umbraco jobs on 17.5 stream into history automatically (15 succeeded within minutes of boot); per-job capability gating hides cron editing/pause/delete (only Run now renders). Tests 57/59 green, format clean, all four packages pack.
+
+Empirical findings that shaped the phase (the version matrix matters):
+- `AddRecurringBackgroundJob<TJob>` is literally `AddSingleton<IRecurringBackgroundJob, TJob>()` → **discovery via `IEnumerable<IRecurringBackgroundJob>` works on 16 and 17**; local job id = type FullName.
+- **Notifications** (`RecurringBackgroundJob{Executing,Executed,Failed,Canceled,Ignored}Notification`, each carrying `.Job`) exist from **Umbraco 17.4**; the **native trigger** (`IRecurringBackgroundJobTrigger<TJob>` + `ITriggerableRecurringBackgroundJob` marker, registered as an open generic) from **17.5**. Umbraco 16 has NEITHER. → the net10 CPM Umbraco range is floored at `[17.5.0,18.0.0)` (this forced the 17.0-installed demo DB through Umbraco's upgrade wizard — one-time, unattended-friendly).
+- **CRITICAL gotcha — Executing fires BEFORE the runtime/server-role/MainDom checks**: skipped ticks then publish `Ignored`. Without handling it, provisional Running rows pile up forever (hit live: TouchServer/InstructionProcess stuck "Running"). Fix: handle Ignored and complete the row as **`ExecutionStatus.Vetoed`** (exact semantic match; the client already renders/filters Vetoed). The fire-instance id travels on the **notification `State`** dictionary (`ObjectNotification` is stateful and Umbraco copies state from Executing to the completion notification via `WithStateFrom`) — no correlation dictionary needed.
+- Umbraco 16's `IRecurringBackgroundJob.RunJobAsync()` **has no CancellationToken** → the planned "stop own runs" is unimplementable there; plan revised (above), documented on `UmbracoJobFallbackRunner`.
+- **EF Core runtime matrix**: Umbraco 16 ships EF Core **9**, and EF8-compiled code throws MissingMethodException on it (`ExecuteUpdate/ExecuteDelete` moved types in EF9). → `NJobDesk.History.EFCore` now multitargets **net8.0;net9.0;net10.0** with per-TFM EF versions (8.0.29 / 9.0.18 / 10.0.10). Any future EF-using package must include a net9 target for Umb16 hosts.
+- Per-run log capture for native jobs is confirmed impossible ambient-ly (the run executes on Umbraco's loop flow, not the notification handler's) — already work-wide out of scope; the Phase-4 Serilog-sink note is therefore moot for this provider and belongs to uQuartz (Phase 7).
+
+What was built (`src\NJobDesk.Umbraco\Providers\`): `UmbracoRecurringJobsProvider` (key `umbraco`, version from `IUmbracoVersion`, caps TriggerNow+History; per-job `TriggerNow` reflects `ITriggerableRecurringBackgroundJob` on 17), `UmbracoJobsInfoService` (interval → "Every N minutes" synthetic Simple trigger; prev/next fire derived from the last history row + Period; store-backed statistics/running filtered to this provider's key), `UmbracoJobsManagementService` (17: constructed-generic `IRecurringBackgroundJobTrigger<>` resolved from DI + `TriggerExecution()` via reflection; 16: `UmbracoJobFallbackRunner` — single-flight per job, writes Start/Complete through `IExecutionHistoryWriter`; everything else delegates to `UnsupportedSchedulerManagementService`), `UmbracoJobHistoryNotificationHandler` (net10-only, all five notifications), and `AddNJobDeskUmbracoJobs(this IUmbracoBuilder)` wiring it per TFM. Demos register the provider + `AddEfHistory` (SQLite under `umbraco\Data`, **absolute path** — relative SQLite paths resolve against the process CWD, not content root, and fail under `dotnet run`) + a 2-minute `DemoNewsletterDispatchJob` (17: `RecurringBackgroundJobBase` + triggerable; 16: raw interface with an empty `PeriodChanged` accessor pair). No provider unit tests: the test project's TFMs (net8/net10) can't reference the net9 Umb16 surface and the trigger/notification paths need a composed Umbraco host — the live walkthrough on both demos is the verification, per the plan's acceptance.
 
 ## Phase 6: NJobDesk.Hangfire provider
 Status: Not started
