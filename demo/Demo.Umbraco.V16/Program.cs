@@ -3,6 +3,9 @@ using NJobDesk.Core.Providers;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+// The |DataDirectory| SQLite connection fails on first boot unless the folder already exists.
+Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "umbraco", "Data"));
+
 builder.Services.AddSingleton<ISchedulerProvider, FakeSchedulerProvider>();
 
 builder.CreateUmbracoBuilder()
