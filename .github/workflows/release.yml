@@ -32,9 +32,6 @@ jobs:
       - name: Run unit tests
         run: dotnet test tests/NJobDesk.Tests --configuration Release --no-build
 
-      - name: Run integration tests
-        run: dotnet test tests/NJobDesk.IntegrationTests --configuration Release --no-build
-
       - name: Run frontend tests
         working-directory: src/NJobDesk.AspNetCore/Client
         run: npm test

@@ -248,12 +248,12 @@ Structure after the refactor (uQuartz consumes NJobDesk 0.1.0 from the local fee
 - **Tests**: deleted the suites duplicating njobdesk coverage (buffer/log-store/cleanup/reconciliation/store stats); adapted the rest to composite ids + `DashboardStatusModel` + provider resolution (`GetRequiredService<ISchedulerProvider>().Info/.Management`); fixture maps `/quartz` for UI, API assertions on `/njobdesk/api/v1`; SqlServer schema assertions split across `quartz` (QRTZ_) and `njobdesk` (history) schemas; the old `DELETE jobs/any/job` (two segments) is now a single composite segment (two-segment paths 405). New `NJobDeskCaptureFactory` builds a real capture scope through DI (scope ctor is internal to NJobDesk); it must register an `IConfiguration` — that surfaced a real NJobDesk bug, fixed in njobdesk `b4f2a91`: **`AddEfHistory` now binds options tolerantly via `GetService<IConfiguration>()` instead of `BindConfiguration`** (bare service collections no longer throw on options resolution).
 
 ## Phase 8: OSS release
-Status: Not started
+Status: In progress — automatable prep done 2026-08-03; the remaining items are owner-side (see below)
 Out of scope for this phase: uQuartz's own release (owner's separate call); DataImport provider.
 
-- [ ] README + docs (quick start per host: plain ASP.NET Core, Umbraco; per provider: native, Hangfire, Quartz-via-uQuartz; screenshots), CONTRIBUTING, `umbraco-marketplace.json` for NJobDesk.Umbraco
-- [ ] Workflows finalized (build matrix incl. npm tests; release via NuGet Trusted Publishing OIDC); repo public on the owner's GitHub account
-- [ ] Tag `v0.1.0` → packages on NuGet.org; scratch-consumer acceptance from the public feed
+- [x] README + docs (quick start per host: plain ASP.NET Core, Umbraco; per provider: native, Hangfire, Quartz-via-uQuartz; screenshots pending), CONTRIBUTING, `umbraco-marketplace.json` for NJobDesk.Umbraco (packed at nupkg root)
+- [x] Workflows finalized (build.yml: build + unit + client tests + pack on push/PR; release.yml: tag-driven version, tests, pack, NuGet Trusted Publishing via `NuGet/login@v1` with `vars.NUGET_USER`, GitHub Release)
+- [ ] **OWNER-SIDE**: create `github.com/mhrinin/njobdesk` (public), push (`git remote add origin ... && git push -u origin main`); configure NuGet.org Trusted Publishing policies for `NJobDesk.Core|AspNetCore|History.EFCore|Umbraco|Hangfire` + set the `NUGET_USER` repository variable; add screenshots to the README; tag `v0.1.0` → release workflow publishes; scratch-consumer acceptance from the public feed
 
 ### Acceptance criteria
 1. Final acceptance walkthrough: (a) plain ASP.NET Core + Hangfire, no Umbraco anywhere; (b) Umb 16 + 17 with native provider; (c) uQuartz demos via local feed; (d) scratch consumers installing the PUBLISHED packages.

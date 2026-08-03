@@ -1,0 +1,13 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "AlternatePackageNames": [ "NJobDesk" ],
+  "Category": "Developer Tools",
+  "Tags": [ "jobs", "scheduler", "dashboard", "background-jobs", "quartz", "hangfire" ],
+  "LicenseTypes": [ "Free" ],
+  "PackageType": "Package",
+  "Description": "A professionally designed jobs dashboard in the Umbraco backoffice: overview, live running jobs, execution history with per-run logs, and management actions across Umbraco recurring jobs, Quartz.NET (via uQuartz), and Hangfire.",
+  "AuthorDetails": {
+    "Name": "Mykhailo Hrinin",
+    "Url": "https://github.com/mhrinin"
+  }
+}
