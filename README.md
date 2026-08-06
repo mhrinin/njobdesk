@@ -22,14 +22,15 @@
 
 ## Quick start — plain ASP.NET Core (Hangfire example)
 
+One package: `dotnet add package NJobDesk.Hangfire` (the dashboard comes with it).
+
 ```csharp
 builder.Services.AddHangfire(config => config.UseInMemoryStorage());
 builder.Services.AddHangfireServer();
 
 builder.Services
-    .AddNJobDeskApi()
-    .AddProvider<HangfireSchedulerProvider>()
-    .AddEfHistory(HistoryDatabase.Sqlite("Data Source=njobdesk-history.db")); // optional
+    .AddNJobDeskHangfire()
+    .AddEfHistory(HistoryDatabase.Sqlite("Data Source=njobdesk-history.db")); // optional, needs NJobDesk.History.EFCore
 
 var app = builder.Build();
 app.MapControllers();

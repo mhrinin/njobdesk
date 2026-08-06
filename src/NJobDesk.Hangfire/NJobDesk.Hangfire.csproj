@@ -9,7 +9,7 @@
     <PackageId>NJobDesk.Hangfire</PackageId>
     <Product>NJobDesk.Hangfire</Product>
     <Title>NJobDesk provider for Hangfire</Title>
-    <Description>Hangfire provider for NJobDesk, the scheduler-agnostic jobs dashboard for .NET: lists recurring jobs with their cron schedules and last/next runs, and triggers or removes them from the dashboard. Works with any Hangfire storage.</Description>
+    <Description>Hangfire provider for NJobDesk, the scheduler-agnostic jobs dashboard for .NET: lists recurring jobs with their cron schedules and last/next runs, and triggers or removes them from the dashboard. Works with any Hangfire storage. Includes the dashboard itself — AddNJobDeskHangfire() + MapNJobDesk() is all a host needs.</Description>
     <PackageTags>jobs scheduler dashboard hangfire background-jobs recurring-jobs</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NJobDesk.Core\NJobDesk.Core.csproj" />
+    <ProjectReference Include="..\NJobDesk.AspNetCore\NJobDesk.AspNetCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
