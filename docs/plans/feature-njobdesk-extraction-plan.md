@@ -253,7 +253,8 @@ Out of scope for this phase: uQuartz's own release (owner's separate call); Data
 
 - [x] README + docs (quick start per host: plain ASP.NET Core, Umbraco; per provider: native, Hangfire, Quartz-via-uQuartz; screenshots pending), CONTRIBUTING, `umbraco-marketplace.json` for NJobDesk.Umbraco (packed at nupkg root)
 - [x] Workflows finalized (build.yml: build + unit + client tests + pack on push/PR; release.yml: tag-driven version, tests, pack, NuGet Trusted Publishing via `NuGet/login@v1` with `vars.NUGET_USER`, GitHub Release)
-- [ ] **OWNER-SIDE**: create `github.com/mhrinin/njobdesk` (public), push (`git remote add origin ... && git push -u origin main`); configure NuGet.org Trusted Publishing policies for `NJobDesk.Core|AspNetCore|History.EFCore|Umbraco|Hangfire` + set the `NUGET_USER` repository variable; add screenshots to the README; tag `v0.1.0` → release workflow publishes; scratch-consumer acceptance from the public feed
+- [x] Create `github.com/mhrinin/njobdesk` (public) and push — DONE 2026-08-06 via `gh` CLI (branch renamed `master`→`main`, default branch `main`, pushed at `07735ee`)
+- [ ] **OWNER-SIDE**: configure NuGet.org Trusted Publishing policies for `NJobDesk.Core|AspNetCore|History.EFCore|Umbraco|Hangfire` (nuget.org → account → Trusted Publishing: repository `mhrinin/njobdesk`, workflow `release.yml`) + set the `NUGET_USER` repository variable on GitHub to the nuget.org username; add screenshots to the README; tag `v0.1.0` + push the tag → release workflow publishes (do NOT tag before Trusted Publishing is configured — the push step would fail); scratch-consumer acceptance from the public feed
 
 ### Acceptance criteria
 1. Final acceptance walkthrough: (a) plain ASP.NET Core + Hangfire, no Umbraco anywhere; (b) Umb 16 + 17 with native provider; (c) uQuartz demos via local feed; (d) scratch consumers installing the PUBLISHED packages.
